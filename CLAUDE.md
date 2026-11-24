@@ -87,3 +87,5 @@ app replaces it as a demo); its lessons apply where they fit.
 - Phase 2 (appointments, emergency cards with offline copy) built and clicked through in demo mode
   (Arabic + English, 375 px, patient view, offline simulated) on 2026-11-24. No schema change was
   needed (the records kind check already allowed 'appointment').
+- 2026-11-24: the owner checked phase 2 on a real phone: emergency cards open in airplane mode,
+  and the calendar file adds the appointment with its reminders. All worked.
