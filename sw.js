@@ -1,7 +1,7 @@
 // Service worker: app files cached (versioned), index.html network-first, Supabase never cached.
 // Bump VERSION whenever any app file changes so phones pick up the new version.
 
-const VERSION = 'fha-v2';
+const VERSION = 'fha-v3';
 const FILES = [
   './', './index.html', './config.js', './manifest.webmanifest', './css/style.css',
   './js/app.js', './js/router.js', './js/data.js', './js/data-demo.js', './js/data-supabase.js',

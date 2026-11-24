@@ -69,5 +69,10 @@ app replaces it as a demo); its lessons apply where they fit.
   guard), owner page, backup/restore, role limits in the demo backend.
 - Home pharmacy and Modern Standard Arabic texts built and clicked through the same day.
 - 2026-11-24: pushed to https://github.com/geno700/family-health-assistant (public, `main`),
-  GitHub Pages on from `main` / root; live in demo mode (config.js empty) at the URL above.
-- Not yet run: schema.sql against the real Supabase project; two real accounts.
+  GitHub Pages on from `main` / root.
+- 2026-11-24: schema.sql run on "github apps" (project gzvknfvqyqfynainxgur); `fha` added to
+  Data API exposed schemas (anon gets "permission denied", as intended); redirect URL
+  `https://algebratronics.com/**` was already allowed. config.js now has the URL + publishable
+  key (same as home-finance), so the live site runs for real; `?demo` still opens the demo.
+- Not yet done: a real end-to-end test with two accounts (sign up, household, join, roles,
+  pharmacy). Make yourself platform owner with the SQL line at the end of schema.sql.
