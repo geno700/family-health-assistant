@@ -74,5 +74,6 @@ app replaces it as a demo); its lessons apply where they fit.
   Data API exposed schemas (anon gets "permission denied", as intended); redirect URL
   `https://algebratronics.com/**` was already allowed. config.js now has the URL + publishable
   key (same as home-finance), so the live site runs for real; `?demo` still opens the demo.
-- Not yet done: a real end-to-end test with two accounts (sign up, household, join, roles,
-  pharmacy). Make yourself platform owner with the SQL line at the end of schema.sql.
+- 2026-11-24: the owner tested the live site with two real accounts (sign up, household, join
+  + approve + key, shared data, roles, pharmacy hidden for a patient): all worked.
+- Platform owner (#/owner): run the SQL line at the end of schema.sql with your user id.
