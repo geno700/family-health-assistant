@@ -68,4 +68,6 @@ app replaces it as a demo); its lessons apply where they fit.
   (add/edit/delete, Arabic digits), settings, admin (code, rename, roles, activity, delete
   guard), owner page, backup/restore, role limits in the demo backend.
 - Home pharmacy and Modern Standard Arabic texts built and clicked through the same day.
+- 2026-11-24: pushed to https://github.com/geno700/family-health-assistant (public, `main`),
+  GitHub Pages on from `main` / root; live in demo mode (config.js empty) at the URL above.
 - Not yet run: schema.sql against the real Supabase project; two real accounts.
