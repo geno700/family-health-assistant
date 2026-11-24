@@ -1,6 +1,6 @@
 # Family Health Assistant / منظّم صحة البيت — Plan
 
-Status: **approved 2026-11-24** (Arabic name منظّم صحة البيت; server-visible names/emails accepted; demo, so alarm and voice limits accepted). Phase 1 built and tested in demo mode (2026-11-24). Owner asked the same day for Modern Standard Arabic texts and for the home pharmacy now (moved forward from phase 2): both built and tested in demo mode. Live on the real Supabase project and tested by the owner with two accounts (2026-11-24). Phase 2 (appointments, emergency cards) built the same day and checked on the owner's phone. Phase 3 (encrypted papers, doctor report) built the same day and checked on the owner's phone. Phase 4 helpers (family key change, box-photo reading) built and tested in demo mode the same day; push reminders not built (owner to decide).
+Status: **approved 2026-11-24** (Arabic name منظّم صحة البيت; server-visible names/emails accepted; demo, so alarm and voice limits accepted). Phase 1 built and tested in demo mode (2026-11-24). Owner asked the same day for Modern Standard Arabic texts and for the home pharmacy now (moved forward from phase 2): both built and tested in demo mode. Live on the real Supabase project and tested by the owner with two accounts (2026-11-24). Phase 2 (appointments, emergency cards) built the same day and checked on the owner's phone. Phase 3 (encrypted papers, doctor report) built the same day and checked on the owner's phone. Phase 4 helpers (family key change, box-photo reading) built and tested in demo mode the same day; push reminders skipped by the owner. All planned phases done.
 
 - Repo and URL: `family-health-assistant` → https://algebratronics.com/family-health-assistant/
 - One line: one household keeps every family member's medicines, doses and health papers in
@@ -40,9 +40,9 @@ sent. Supabase stores only scrambled text it cannot read.**
 ## 2. What a web app cannot do (accepted, "replaces Android")
 
 - **No reliable alarm when the phone is locked or the browser is closed.** Phase 1 reminds
-  only while the app is open (Today screen + browser notification at dose time). Phase 4 adds
-  web push, which still isn't a ringing alarm and needs the server to know dose *times* (not
-  medicines). Families who need a real alarm should also set the phone's own clock alarm.
+  only while the app is open (Today screen + browser notification at dose time). Web push was
+  considered for phase 4 and skipped (it still isn't a ringing alarm and needs the server to know
+  dose *times*). Families who need a real alarm should also set the phone's own clock alarm.
 - **Voice input:** Chrome's built-in speech recognition sends audio to Google, which breaks
   the privacy design, so voice is cut. Box-photo reading can run in the browser (Tesseract.js)
   in a later phase.
@@ -171,9 +171,10 @@ activity_log on record changes. Constraints (not null, checks, foreign keys) in 
   and parsed by the rules ported from the Android BoxTextParser: name candidates (tap the right
   one), strength, form, and for the pharmacy also count and expiry. Dose, times and duration are
   never read. Nothing is saved until the user checks the form and taps Save.
-- **Not built: push reminders while the app is closed.** They need a server job, a new secret
-  (VAPID key) and dose times on the server; the owner accepted reminders-while-open for the demo.
-  To be decided with the owner.
+- **Push reminders while the app is closed: skipped (owner, 2026-11-24).** They would need a
+  server job, a new secret (VAPID key) and dose times on the server. For the demo, reminders work
+  while the app is open, and appointments use the phone's calendar. A phone app can bring real
+  alarms back later.
 
 ## 6. Phase 1 is done when
 - Runs locally (`python -m http.server`); every screen clicked through in demo mode, Arabic and

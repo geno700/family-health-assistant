@@ -110,4 +110,5 @@ app replaces it as a demo); its lessons apply where they fit.
 - Phase 4 helpers (key change, box-photo reading) built and clicked through in demo mode (Arabic +
   English, 375 px; key change kept all 73 items and re-locked paper photos; a phone with the old key
   is refused and asked for the new one) on 2026-11-24. schema.sql re-run on Supabase the same day.
-  Not yet tried with real accounts. Push reminders not built: waiting for the owner's decision.
+  Not yet tried with real accounts. Push reminders: skipped by the owner (2026-11-24); don't build
+  them unless asked (they need a server job, a VAPID secret and dose times on the server).
