@@ -1,7 +1,7 @@
 // Service worker: app files cached (versioned), index.html network-first, Supabase never cached.
 // Bump VERSION whenever any app file changes so phones pick up the new version.
 
-const VERSION = 'fha-v3';
+const VERSION = 'fha-v4';
 const FILES = [
   './', './index.html', './config.js', './manifest.webmanifest', './css/style.css',
   './js/app.js', './js/router.js', './js/data.js', './js/data-demo.js', './js/data-supabase.js',
@@ -12,7 +12,8 @@ const FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)));
+  // cache: 'reload' skips the browser's HTTP cache, so a new version never stores stale files
+  event.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))));
 });
 
 self.addEventListener('activate', (event) => {
