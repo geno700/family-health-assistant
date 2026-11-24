@@ -1,12 +1,13 @@
 // Service worker: app files cached (versioned), index.html network-first, Supabase never cached.
 // Bump VERSION whenever any app file changes so phones pick up the new version.
 
-const VERSION = 'fha-v4';
+const VERSION = 'fha-v5';
 const FILES = [
   './', './index.html', './config.js', './manifest.webmanifest', './css/style.css',
   './js/app.js', './js/router.js', './js/data.js', './js/data-demo.js', './js/data-supabase.js',
   './js/store.js', './js/crypto.js', './js/i18n.js', './js/ui.js', './js/doses.js',
   './js/views-auth.js', './js/views-today.js', './js/views-meds.js', './js/views-pharmacy.js', './js/stock.js', './js/views-family.js',
+  './js/views-appts.js', './js/views-emergency.js',
   './js/views-settings.js', './js/views-admin.js', './js/views-owner.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
 ];
@@ -38,7 +39,9 @@ self.addEventListener('fetch', (event) => {
   if (url.hostname.endsWith('supabase.co') || url.hostname.endsWith('supabase.in')) return;
   const sameOrigin = url.origin === self.location.origin;
   const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-  if (!sameOrigin && !isFont) return;
+  // The Supabase library (pinned versions from jsDelivr) is kept too, so the app can start with no internet
+  const isLib = url.hostname === 'cdn.jsdelivr.net' && url.pathname.startsWith('/npm/');
+  if (!sameOrigin && !isFont && !isLib) return;
 
   // Pages: network first, so a new index.html is seen as soon as there is a connection
   if (req.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
@@ -54,7 +57,7 @@ self.addEventListener('fetch', (event) => {
   // Everything else: cache first, then network (and keep a copy)
   event.respondWith(
     caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-      if (res.ok && (sameOrigin || isFont)) {
+      if (res.ok && (sameOrigin || isFont || isLib)) {
         const copy = res.clone();
         caches.open(VERSION).then((c) => c.put(req, copy));
       }

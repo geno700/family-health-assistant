@@ -9,6 +9,7 @@ import { esc, icon, toast, toastAction, emptyState } from './ui.js';
 import { personColor } from './views-family.js';
 import { groupsNow } from './views-pharmacy.js';
 import { needsAttention } from './stock.js';
+import { apptRow, isPast, whenWords } from './views-appts.js';
 
 const NOTIFIED_KEY = 'fha.notified';
 
@@ -30,7 +31,9 @@ export function render(main) {
     const done = doses.filter((d) => d.state === 'TAKEN' || d.state === 'SKIPPED');
     const asNeeded = meds.filter((m) => m.scheduleType === 'AS_NEEDED' && !m.stopped);
 
-    if (meds.length === 0) {
+    const soonAppts = store.appts().filter((a) => store.person(a.personId) && !isPast(a)
+      && [t('day_today'), t('day_tomorrow')].includes(whenWords(a.at)));
+    if (meds.length === 0 && !soonAppts.length) {
       main.innerHTML = `<section class="page">${emptyState('pill', t('today_empty_title'), t('today_empty_body'),
         store.canWrite() ? `<a class="btn btn-primary btn-big" href="#/family">${icon('plus')}${esc(t('add_person'))}</a>` : '')}</section>`;
       return;
@@ -41,6 +44,7 @@ export function render(main) {
       <section class="page">
         <h1>${esc(t('tab_today'))}</h1>
         ${stockBanner()}
+        ${soonAppts.length ? `<h2>${esc(t('today_appts'))}</h2><div class="card list">${soonAppts.map((a) => apptRow(a)).join('')}</div>` : ''}
         ${canNotify ? `<button class="btn btn-secondary" id="notif">${icon('bell')}${esc(t('enable_notifications'))}</button>` : ''}
         ${due.length ? `<h2>${esc(t('today_now'))}</h2>${due.map((d) => dueCard(d, false)).join('')}` : ''}
         ${missed.length ? `<h2>${esc(t('today_missed'))}</h2><p class="hint">${esc(t('missed_note'))}</p>${missed.map((d) => dueCard(d, true)).join('')}` : ''}
@@ -59,7 +63,23 @@ export function render(main) {
     const n = main.querySelector('#notif');
     if (n) n.onclick = async () => { await Notification.requestPermission(); draw(); };
     notifyDue(due);
+    notifyAppts(soonAppts);
   };
+
+  /** While the app is open: one phone notification when an appointment is 2 hours away or less. */
+  function notifyAppts(list) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const seen = notified();
+    list.filter((a) => a.at - Date.now() <= 2 * 3600000).forEach((a) => {
+      const key = `appt|${a.id}|${a.at}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      try {
+        new Notification(t('notify_appt', a.name), { body: `${store.person(a.personId)?.name || ''} • ${hhmm(a.at)}`, tag: key });
+      } catch { /* some browsers only allow notifications from a service worker */ }
+    });
+    markNotified(seen);
+  }
 
   /** Out, low or expired medicines in the home pharmacy (not shown to patients). */
   function stockBanner() {

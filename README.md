@@ -40,6 +40,11 @@ It is served at https://algebratronics.com/family-health-assistant/. All paths a
 (`./`), and `.nojekyll` makes Pages serve every file as is. When you change any app file, bump
 `VERSION` in `sw.js` so installed phones show "New version, reload".
 
+## Phase 2 to try in the demo
+- Family → Appointments: add one, open it, "add to the phone's calendar" downloads an .ics file.
+- Red "Emergency" button (top): each person's card, call 123 or their contact, share as text.
+- Turn on airplane mode after opening the app once: the offline screen still opens the cards.
+
 ## How privacy works
 
 - Creating a household makes a 256-bit **family key** in the owner's browser and shows it once

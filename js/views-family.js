@@ -6,6 +6,7 @@ import * as store from './store.js';
 import { doseLine, medTitle, howOften } from './doses.js';
 import { esc, icon, toast, confirmDialog, emptyState, $ } from './ui.js';
 import { go } from './router.js';
+import { apptRow, isPast } from './views-appts.js';
 
 const COLORS = ['#2E7D6B', '#3B6EA5', '#8E5BA8', '#B0683A', '#5C7A2E', '#A2496A'];
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -35,9 +36,12 @@ function list(main) {
       main.innerHTML = `<section class="page">${emptyState('family', t('family_empty_title'), t('family_empty_body'), addBtn)}</section>`;
       return;
     }
+    const next = store.appts().filter((a) => !isPast(a) && store.person(a.personId));
     main.innerHTML = `
       <section class="page">
         <h1>${esc(t('tab_family'))}</h1>
+        <a class="card row link" href="#/appts">${icon('today')}<div class="grow"><div class="strong">${esc(t('appts_title'))}</div>
+          <div class="muted">${esc(next.length ? `${next[0].name} • ${store.person(next[0].personId)?.name || ''}` : t('no_appts'))}</div></div><span class="chev">›</span></a>
         ${people.map((p) => {
           const facts = [age(p.birthYear) != null ? t('age_years', age(p.birthYear)) : '', p.bloodType ? t('blood', ltr(p.bloodType)) : ''].filter(Boolean).join(' • ');
           return `<a class="card row link" href="#/family/${esc(p.id)}">
@@ -58,6 +62,7 @@ function page(main, id) {
     if (!p) { main.innerHTML = `<section class="page">${emptyState('family', t('no_results'), '')}</section>`; return; }
     const can = store.canWrite();
     const meds = store.meds().filter((m) => m.personId === id);
+    const appts = store.appts().filter((a) => a.personId === id && !isPast(a));
     main.innerHTML = `
       <section class="page">
         <a class="back" href="#/family">${esc(t('back'))}</a>
@@ -68,6 +73,7 @@ function page(main, id) {
           ${(p.allergies || []).length ? `<p class="danger-text">${esc(t('allergy_line', p.allergies.map(ltr).join('، ')))}</p>` : ''}
           ${(p.conditions || []).length ? `<p>${esc(t('conditions_line', p.conditions.join('، ')))}</p>` : ''}
           ${p.contactPhone ? `<p><a class="btn btn-secondary" href="tel:${esc(p.contactPhone)}">${esc(p.contactName || '')} ${esc(ltr(p.contactPhone))}</a></p>` : ''}
+          <a class="btn btn-danger-outline" href="#/emergency/${esc(id)}">${icon('alert')}${esc(t('emergency_card'))}</a>
           ${can ? `<div class="btn-row">
             <a class="btn btn-secondary" href="#/family/${esc(id)}/edit">${icon('edit')}${esc(t('edit_person'))}</a>
             <button class="btn btn-danger-outline" id="del">${icon('trash')}${esc(t('delete'))}</button></div>` : ''}
@@ -78,6 +84,9 @@ function page(main, id) {
             <div class="muted">${esc(m.stopped ? t('med_stopped') : `${doseLine(m)} • ${howOften(m)}`)}</div></div><span class="chev">›</span></a>`).join('')}</div>`
           : `<p class="muted">${esc(t('meds_empty_body'))}</p>`}
         ${can ? `<a class="btn btn-primary btn-big" href="#/meds/new/${esc(id)}">${icon('plus')}${esc(t('add_med'))}</a>` : ''}
+        <h2>${esc(t('person_appts'))}</h2>
+        ${appts.length ? `<div class="card list">${appts.map((a) => apptRow(a, { showPerson: false })).join('')}</div>` : `<p class="muted">${esc(t('no_appts'))}</p>`}
+        ${can ? `<a class="btn btn-secondary" href="#/appts/new/${esc(id)}">${icon('plus')}${esc(t('add_appt'))}</a>` : ''}
       </section>`;
     const del = $('#del');
     if (del) del.onclick = async () => {

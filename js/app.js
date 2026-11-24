@@ -11,6 +11,8 @@ import * as todayView from './views-today.js';
 import * as medsView from './views-meds.js';
 import * as pharmacyView from './views-pharmacy.js';
 import * as familyView from './views-family.js';
+import * as apptsView from './views-appts.js';
+import * as emergencyView from './views-emergency.js';
 import * as settingsView from './views-settings.js';
 import * as adminView from './views-admin.js';
 import * as ownerView from './views-owner.js';
@@ -55,12 +57,18 @@ async function render() {
   if (!disclaimerAccepted()) {
     return bare(auth.disclaimer, () => { localStorage.setItem(DISCLAIMER_KEY, 'yes'); render(); });
   }
-  user = await api.getUser();
-  store.setUser(user?.id || null);
+  const route = parseRoute();
+  // No internet: keep going only if this session's data is already loaded; otherwise show the
+  // offline screen, which can still open the emergency cards saved on this device.
+  const offline = !navigator.onLine;
+  if (offline && !(user && store.isLoaded())) return bare(offlineScreen, route);
+  if (!offline) {
+    user = await api.getUser();
+    store.setUser(user?.id || null);
+  }
   if (recovering && user) return bare(auth.setPassword, () => { recovering = false; render(); });
   if (!user) return bare(auth.signIn, render);
 
-  const route = parseRoute();
   if (route.name === 'owner') {
     shell.classList.remove('bare');
     drawHeader(true);
@@ -69,7 +77,7 @@ async function render() {
     return;
   }
 
-  await store.loadMemberships();
+  if (!offline) await store.loadMemberships();
   if (!store.active()) {
     const pending = store.memberships().filter((x) => x.member.status === 'pending');
     const disabled = store.memberships().filter((x) => x.group.disabled);
@@ -91,12 +99,18 @@ async function render() {
 
   shell.classList.remove('bare');
   drawHeader(true);
-  drawTabs(route.name);
+  drawTabs(route.name === 'appts' ? 'family' : route.name);
   const views = {
     today: () => todayView.render(main),
     meds: () => medsView.render(main, route.params),
     pharmacy: () => pharmacyView.render(main, route.params),
     family: () => familyView.render(main, route.params),
+    appts: () => apptsView.render(main, route.params),
+    emergency: () => {
+      const draw = () => emergencyView.render(main, route.params, { cards: store.emergencyCards() });
+      draw();
+      return store.onChange(draw);
+    },
     settings: () => settingsView.render(main, { user }),
     admin: () => adminView.render(main, { user }),
   };
@@ -107,8 +121,10 @@ async function render() {
 function drawHeader(full) {
   const memberships = full ? store.memberships().filter((x) => x.member.status === 'active') : [];
   const g = store.group();
+  $('#header').classList.toggle('full', full);
   $('#header').innerHTML = `
     <div class="brand">${icon('home')}<span>${esc(t('app_name'))}</span>${isDemo ? `<span class="badge-demo">${esc(t('demo'))}</span>` : ''}</div>
+    ${full ? `<a class="sos-pill" href="#/emergency">${icon('alert')}<span>${esc(t('sos'))}</span></a>` : ''}
     ${full && memberships.length > 0 ? `
       <label class="house-switch">
         <span class="sr-only">${esc(t('switch_house'))}</span>
@@ -128,6 +144,26 @@ function drawTabs(current) {
     </a>`).join('');
 }
 
+/** No internet and nothing loaded yet: say so, and offer the emergency cards kept on this device. */
+function offlineScreen(main, route) {
+  let alive = true;
+  store.readEmergencyCopy().then((copy) => {
+    if (!alive) return;
+    if (route.name === 'emergency') {
+      emergencyView.render(main, route.params, { cards: copy?.cards || [], offlineAt: copy?.savedAt || Date.now(), backHref: '#/' });
+      return;
+    }
+    main.innerHTML = `
+      <section class="page narrow">
+        <div class="empty">${icon('alert')}<h2>${esc(t('offline_title'))}</h2><p>${esc(t('offline_body'))}</p></div>
+        <a class="btn btn-danger btn-big" href="#/emergency">${icon('alert')}${esc(t('open_emergency'))}</a>
+        <button class="btn btn-secondary" id="retry">${icon('refresh')}${esc(t('retry'))}</button>
+      </section>`;
+    $('#retry').onclick = () => location.reload();
+  });
+  return () => { alive = false; };
+}
+
 // ---------- Start ----------
 
 async function start() {
@@ -135,15 +171,21 @@ async function start() {
   try {
     await api.init();
   } catch (e) {
-    $('#main').innerHTML = `<div class="empty"><h2>${esc(t('error_generic'))}</h2></div>`;
+    // Usually no internet on the very first load: the emergency cards may still be on the phone
+    window.addEventListener('online', () => location.reload());
+    window.addEventListener('hashchange', () => { drawHeader(false); offlineScreen($('#main'), parseRoute()); });
+    drawHeader(false);
+    offlineScreen($('#main'), parseRoute());
     return;
   }
   api.onAuthChange((event) => {
     if (event === 'PASSWORD_RECOVERY') recovering = true;
+    if (event === 'SIGNED_OUT') store.forgetEmergencyCopies();
     if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'PASSWORD_RECOVERY') render();
   });
   setRerender(render);
   window.addEventListener('hashchange', render);
+  window.addEventListener('online', () => render());
   await render();
   registerServiceWorker();
 }

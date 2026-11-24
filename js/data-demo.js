@@ -4,7 +4,7 @@
 
 import { encryptJson, makeKeyCheck, newKeyBytes, saveDeviceKey } from './crypto.js';
 
-const DB_KEY = 'fha.demo.db.v2'; // v2: pharmacy + Modern Standard Arabic sample data
+const DB_KEY = 'fha.demo.db.v3'; // v3: appointments (v2: pharmacy + Modern Standard Arabic)
 const USER_KEY = 'fha.demo.user';
 const WRITERS = ['owner', 'admin', 'caregiver'];
 const ADMINS = ['owner', 'admin'];
@@ -126,11 +126,17 @@ async function seed() {
     { name: 'Vidrop', strength: '2800 IU', form: 'DROPS', count: 1, expiry: ym(5), note: '' },
   ];
   boxes.forEach((b) => items.push(['stock', uid(), { ...b, countedAt: counted, createdAt: created }]));
+  // Appointments: tomorrow, in 5 days and one last month
+  const at = (days, h, m) => { const d = new Date(today); d.setDate(d.getDate() + days); d.setHours(h, m, 0, 0); return d.getTime(); };
+  items.push(['appointment', uid(), { personId: p.mama, name: 'د. سامي (عيادة القلب)', at: at(1, 18, 30), place: 'مستشفى المدينة، الدور الثالث', note: 'أحضري نتيجة رسم القلب الأخيرة.', createdAt: created }]);
+  items.push(['appointment', uid(), { personId: p.baba, name: 'معمل التحاليل', at: at(5, 9, 0), place: 'معمل النور', note: 'صائمًا 8 ساعات قبل التحليل.', createdAt: created }]);
+  items.push(['appointment', uid(), { personId: p.baba, name: 'د. منى (السكري)', at: at(-30, 17, 0), place: '', note: '', createdAt: created }]);
   for (const [kind, id, data] of items) {
     const personId = kind === 'person' ? id : kind === 'stock' ? gid : data.personId;
     const c = await encryptJson(key, { ...data, id });
     db.records.push({ id, group_id: gid, kind, person_id: personId, cipher: c.cipher, iv: c.iv, version: 1, created_at: t0, created_by: 'demo-owner', updated_at: t0, updated_by: 'demo-owner', deleted_at: null });
   }
+  try { localStorage.removeItem('fha.demo.db.v2'); } catch { /* ignore */ } // older sample data
   // The demo device already "knows" the family key, as if the owner typed it
   saveDeviceKey(gid, key);
   store(db);

@@ -59,7 +59,14 @@ app replaces it as a demo); its lessons apply where they fit.
   computed in `js/stock.js` from count + countedAt minus taken dose logs (first to expire first),
   never written back, so undo needs nothing and patients need no write access to stock. Each
   dose log keeps the amount taken. Matching is by name + strength only, never by ingredient.
-- 2026-11-24: demo storage key is now `fha.demo.db.v2` (new sample data); sw.js VERSION fha-v2.
+- 2026-11-24: demo storage key is now `fha.demo.db.v3` (sample appointments added); bump it when
+  sample data changes. sw.js VERSION is now fha-v5; bump it on every app file change.
+- 2026-11-24 (phase 2): appointments are `appointment` records (person_id = the person). Real
+  reminders with the app closed come from an .ics file for the phone's calendar, not the app.
+- 2026-11-24 (phase 2): emergency cards are saved on the device as `fha.sos.<householdId>`,
+  encrypted with the family key, refreshed after every change, deleted on sign out. They open
+  offline from the offline screen. On phones the header hides the app name (icon only) to fit
+  the household switcher and the red Emergency button.
 
 ## Status
 - Phase 1 built and clicked through in demo mode (Arabic + English, 375 px) on 2026-11-24:
@@ -77,3 +84,6 @@ app replaces it as a demo); its lessons apply where they fit.
 - 2026-11-24: the owner tested the live site with two real accounts (sign up, household, join
   + approve + key, shared data, roles, pharmacy hidden for a patient): all worked.
 - Platform owner (#/owner): run the SQL line at the end of schema.sql with your user id.
+- Phase 2 (appointments, emergency cards with offline copy) built and clicked through in demo mode
+  (Arabic + English, 375 px, patient view, offline simulated) on 2026-11-24. No schema change was
+  needed (the records kind check already allowed 'appointment').

@@ -4,8 +4,10 @@
 
 import { api } from './data.js';
 import { decodeKeyCode, keyMatches, loadDeviceKey, saveDeviceKey, encryptJson, decryptJson } from './crypto.js';
+import { isoDate } from './doses.js';
 
 const ACTIVE_KEY = 'fha.active';
+const SOS_PREFIX = 'fha.sos.'; // emergency cards kept on the device (encrypted) for offline use
 const WRITERS = ['owner', 'admin', 'caregiver'];
 
 const state = {
@@ -16,6 +18,7 @@ const state = {
   meds: new Map(),
   logs: new Map(), // `${medicineId}|${scheduledAt}` -> log (has .id = record id)
   stock: new Map(), // home pharmacy boxes (record person_id = household id: not one person's)
+  appts: new Map(), // appointments (record person_id = the person)
   unreadable: 0,
   loaded: false,
 };
@@ -25,8 +28,12 @@ export function onChange(cb) {
   listeners.push(cb);
   return () => { listeners = listeners.filter((x) => x !== cb); };
 }
+let sosTimer = null;
 function changed() {
   listeners.forEach((cb) => cb());
+  // Keep this device's offline copy of the emergency cards up to date (a moment later, once)
+  clearTimeout(sosTimer);
+  sosTimer = setTimeout(saveEmergencyCopy, 800);
 }
 
 // ---------- Households ----------
@@ -37,7 +44,7 @@ export function setUser(userId) {
   state.userId = userId;
   state.active = null;
   state.key = null;
-  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear();
+  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear();
   state.loaded = false;
   state.unreadable = 0;
 }
@@ -60,7 +67,7 @@ function setActiveInternal(m) {
   }
   state.active = m;
   state.key = m ? loadDeviceKey(m.group.id) : null;
-  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear();
+  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear();
   state.loaded = false;
   state.unreadable = 0;
   if (m) { try { localStorage.setItem(ACTIVE_KEY, m.group.id); } catch { /* ignore */ } }
@@ -109,7 +116,7 @@ export async function reload() {
   const g = group();
   if (!g || !state.key) return;
   const rows = await api.listRecords(g.id);
-  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear();
+  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear();
   state.unreadable = 0;
   await Promise.all(rows.map(async (r) => {
     try {
@@ -119,6 +126,7 @@ export async function reload() {
       else if (r.kind === 'medicine') state.meds.set(r.id, obj);
       else if (r.kind === 'dose_log') state.logs.set(`${obj.medicineId}|${obj.scheduledAt}`, obj);
       else if (r.kind === 'stock') state.stock.set(r.id, obj);
+      else if (r.kind === 'appointment') state.appts.set(r.id, obj);
     } catch {
       state.unreadable += 1; // made with another key: skipped, never shown garbled
     }
@@ -156,13 +164,15 @@ export async function savePerson(p) {
   return saved;
 }
 
-/** Deletes the person and their medicines (their dose history goes with the medicines). */
+/** Deletes the person, their medicines (dose history goes with them) and their appointments. */
 export async function deletePerson(id) {
   const g = group();
   for (const m of meds().filter((x) => x.personId === id)) await api.deleteRecord(g.id, m.id);
+  for (const a of appts().filter((x) => x.personId === id)) await api.deleteRecord(g.id, a.id);
   await api.deleteRecord(g.id, id);
   state.people.delete(id);
   meds().filter((x) => x.personId === id).forEach((m) => state.meds.delete(m.id));
+  appts().filter((x) => x.personId === id).forEach((a) => state.appts.delete(a.id));
   changed();
 }
 
@@ -195,6 +205,76 @@ export async function deleteStock(id) {
   await api.deleteRecord(group().id, id);
   state.stock.delete(id);
   changed();
+}
+
+// ---------- Appointments ----------
+
+/** Appointments in time order. Each: { id, personId, name (doctor or place), at (ms), place, note }. */
+export const appts = () => [...state.appts.values()].sort((a, b) => a.at - b.at);
+export const appt = (id) => state.appts.get(id) || null;
+
+export async function saveAppt(a) {
+  const obj = { createdAt: Date.now(), ...a, id: a.id || newId() };
+  const saved = await put('appointment', obj.personId, obj);
+  state.appts.set(saved.id, saved);
+  changed();
+  return saved;
+}
+
+export async function deleteAppt(id) {
+  await api.deleteRecord(group().id, id);
+  state.appts.delete(id);
+  changed();
+}
+
+// ---------- Emergency cards ----------
+
+/** Medicines someone is on now (as-needed included; stopped or finished courses left out). */
+export function currentMeds(personId, nowMs = Date.now()) {
+  const day = isoDate(new Date(nowMs));
+  return meds().filter((m) => m.personId === personId && !m.stopped
+    && (!m.startDate || m.startDate <= day) && (!m.endDate || m.endDate >= day));
+}
+
+/** Plain cards (what a paramedic needs) for everyone this account can see. */
+export function emergencyCards() {
+  return people().map((p) => ({
+    id: p.id, name: p.name, birthYear: p.birthYear || null, bloodType: p.bloodType || '', color: p.color,
+    allergies: p.allergies || [], conditions: p.conditions || [], contactName: p.contactName || '', contactPhone: p.contactPhone || '',
+    meds: currentMeds(p.id).map((m) => ({ name: m.name, strength: m.strength || '', form: m.form, doseAmount: m.doseAmount,
+      scheduleType: m.scheduleType, times: m.times || [], everyNDays: m.everyNDays || null, foodTiming: m.foodTiming })),
+  }));
+}
+
+/** Saves the cards on this device, encrypted with the family key (same protection as the key itself). */
+async function saveEmergencyCopy() {
+  const g = group();
+  if (!g || !state.key || !state.loaded) return;
+  try {
+    const c = await encryptJson(state.key, { savedAt: Date.now(), cards: emergencyCards() });
+    localStorage.setItem(SOS_PREFIX + g.id, JSON.stringify(c));
+  } catch { /* storage full or private mode: the online cards still work */ }
+}
+
+/** The offline copy for the last household used on this device: { savedAt, cards } or null. */
+export async function readEmergencyCopy() {
+  try {
+    const gid = localStorage.getItem(ACTIVE_KEY);
+    const raw = gid && localStorage.getItem(SOS_PREFIX + gid);
+    const key = gid && loadDeviceKey(gid);
+    if (!raw || !key) return null;
+    const c = JSON.parse(raw);
+    return await decryptJson(key, c.cipher, c.iv);
+  } catch {
+    return null;
+  }
+}
+
+/** On sign out the offline cards go too, so a signed-out phone shows nothing. */
+export function forgetEmergencyCopies() {
+  try {
+    Object.keys(localStorage).filter((k) => k.startsWith(SOS_PREFIX)).forEach((k) => localStorage.removeItem(k));
+  } catch { /* ignore */ }
 }
 
 // ---------- Doses ----------
@@ -242,6 +322,7 @@ export function exportData() {
     medicines: meds(),
     doseLogs: logs(),
     stock: stockBoxes(),
+    appointments: appts(),
   };
 }
 
@@ -272,6 +353,10 @@ export async function importData(data) {
     if (personId) { await put('dose_log', personId, { ...l, id: map(l.id), medicineId }); n += 1; }
   }
   for (const b of data.stock || []) { await put('stock', group().id, { ...b, id: map(b.id) }); n += 1; }
+  for (const a of data.appointments || []) {
+    const personId = map(a.personId);
+    if (personId) { await put('appointment', personId, { ...a, id: map(a.id), personId }); n += 1; }
+  }
   await reload();
   return n;
 }

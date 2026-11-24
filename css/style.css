@@ -202,6 +202,36 @@ legend { font-weight: 700; padding: 0; margin-bottom: .3rem; }
 .answer-no { background: var(--amber-soft); border-color: transparent; }
 .answer-no .icon { color: var(--amber); }
 
+.tag-green { background: var(--green-soft); color: var(--green-dark); }
+.tag-muted { background: var(--line); color: var(--muted); }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.grid2 > *, .grid2 .input { min-width: 0; }
+
+/* ---------- Appointments ---------- */
+.appt-date { min-width: 4.2rem; display: flex; flex-direction: column; align-items: flex-start; gap: .15rem; color: var(--green); }
+.appt-date .tag { white-space: nowrap; }
+.appt-when { font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+
+/* ---------- Emergency ---------- */
+.sos-pill {
+  display: inline-flex; align-items: center; gap: .3rem; min-height: 44px; padding: 0 .8rem; border-radius: 999px;
+  background: var(--red); color: #fff; font-weight: 700; text-decoration: none; flex: none;
+}
+.sos-pill .icon { width: 20px; height: 20px; }
+/* Phones: the household switcher and the emergency button need the room; the house icon stays */
+@media (max-width: 480px) { .header.full .brand > span:first-of-type { display: none; } }
+.em-card { border: 2px solid var(--red); gap: .7rem; }
+.em-head { display: flex; align-items: center; gap: .4rem; color: var(--red); font-weight: 700; }
+.em-name { font-size: 1.9rem; }
+.em-facts { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.em-facts > div { background: var(--page); border-radius: 12px; padding: .5rem .7rem; }
+.em-facts .strong { font-size: 1.3rem; }
+.em-box { background: var(--page); border-radius: 12px; padding: .6rem .8rem; }
+.em-danger { background: var(--red-soft); color: var(--red); }
+.em-danger div:last-child { font-size: 1.2rem; font-weight: 700; }
+.em-meds { margin: .2rem 0 0; padding-inline-start: 1.2rem; }
+.em-meds li { margin: .2rem 0; }
+
 /* ---------- Dialogs, toasts, update bar ---------- */
 .dialog { border: 0; border-radius: 20px; padding: 1.2rem; width: min(92vw, 440px); background: var(--card); color: var(--text); }
 .dialog::backdrop { background: rgba(0, 0, 0, .45); }

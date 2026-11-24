@@ -128,6 +128,36 @@ const ar = {
   today_stock_banner: 'في الصيدلية ما يحتاج إلى انتباه: {0}', open_pharmacy: 'فتح الصيدلية',
   export_stock_csv: 'تصدير الصيدلية (CSV)',
 
+  // Appointments
+  appts_title: 'المواعيد', appts_upcoming: 'المواعيد القادمة', appts_past: 'مواعيد سابقة',
+  appts_empty_title: 'لا توجد مواعيد', appts_empty_body: 'أضف مواعيد الأطباء والتحاليل حتى لا يفوتك أحدها.',
+  add_appt: 'إضافة موعد', new_appt: 'موعد جديد', edit_appt: 'تعديل الموعد',
+  appt_for: 'لمن الموعد؟', appt_person_required: 'اختر الشخص',
+  appt_name: 'الطبيب أو الجهة', appt_name_hint: 'د. سامي (القلب)، معمل التحاليل…', appt_name_required: 'اكتب اسم الطبيب أو الجهة',
+  appt_date: 'التاريخ', appt_time: 'الساعة', appt_when_required: 'اختر التاريخ والساعة',
+  appt_place: 'المكان', appt_place_hint: 'اسم المستشفى أو العنوان',
+  appt_note: 'ملاحظات', appt_note_hint: 'أسئلة للطبيب، أو أوراق تأخذها معك',
+  appt_delete_confirm: 'حذف هذا الموعد؟',
+  day_today: 'اليوم', day_tomorrow: 'غدًا', appt_in: 'بعد {0}', appt_done: 'انتهى',
+  appt_calendar: 'إضافة إلى تقويم الهاتف',
+  appt_calendar_hint: 'يذكّرك تقويم الهاتف قبل الموعد بيوم وقبله بساعتين، حتى لو كان التطبيق مغلقًا.',
+  appt_calendar_title: 'موعد {0}: {1}',
+  today_appts: 'مواعيد قريبة', notify_appt: 'موعد قريب: {0}',
+  all_appts: 'جميع المواعيد', person_appts: 'المواعيد', no_appts: 'لا توجد مواعيد قادمة.',
+  kind_appointment: 'موعدًا',
+
+  // Emergency
+  sos: 'طوارئ', emergency_title: 'بطاقات الطوارئ', emergency_pick: 'اختر الشخص لعرض بطاقته.',
+  emergency_card: 'بطاقة الطوارئ', call_ambulance: 'اتصال بالإسعاف (123)', call_contact: 'اتصال بـ {0}',
+  em_age: 'العمر', em_blood: 'فصيلة الدم', em_allergies: 'الحساسية', em_no_allergies: 'لا توجد حساسية مسجّلة',
+  em_conditions: 'الأمراض المزمنة', em_meds: 'الأدوية الحالية', em_no_meds: 'لا توجد أدوية حالية',
+  em_contact: 'شخص للطوارئ', em_share: 'مشاركة البطاقة', em_copied: 'تم نسخ البطاقة',
+  em_offline: 'لا يوجد اتصال بالإنترنت. هذه آخر نسخة حُفظت على هذا الهاتف ({0}).',
+  em_saved_note: 'تُحفظ هذه البطاقات على هذا الهاتف مقفلة بمفتاح العائلة، لتُفتح بدون إنترنت.',
+  em_none: 'لا توجد بطاقات محفوظة على هذا الهاتف.',
+  offline_title: 'لا يوجد اتصال بالإنترنت', offline_body: 'يحتاج التطبيق إلى الإنترنت، أما بطاقات الطوارئ فتُفتح بدونه.',
+  open_emergency: 'فتح بطاقات الطوارئ', retry: 'إعادة المحاولة',
+
   // Family
   family_empty_title: 'ابدأ بأفراد العائلة', family_empty_body: 'أضف كل من يتناول أدوية في المنزل. يكفي الاسم.',
   add_person: 'إضافة فرد من العائلة', edit_person: 'تعديل البيانات', new_person: 'فرد جديد',
@@ -293,6 +323,34 @@ const en = {
 
   form_TABLET: 'Tablets', form_CAPSULE: 'Capsules', form_SYRUP: 'Syrup', form_DROPS: 'Drops',
   form_INJECTION: 'Injections', form_CREAM: 'Cream or ointment', form_SPRAY: 'Spray',
+
+  appts_title: 'Appointments', appts_upcoming: 'Coming up', appts_past: 'Past appointments',
+  appts_empty_title: 'No appointments', appts_empty_body: "Add doctor and lab appointments so you don't miss one.",
+  add_appt: 'Add appointment', new_appt: 'New appointment', edit_appt: 'Edit appointment',
+  appt_for: 'Who is it for?', appt_person_required: 'Choose the person',
+  appt_name: 'Doctor or place', appt_name_hint: 'Dr Sami (heart), the lab…', appt_name_required: 'Enter the doctor or place',
+  appt_date: 'Date', appt_time: 'Time', appt_when_required: 'Choose the date and time',
+  appt_place: 'Where', appt_place_hint: 'Hospital name or address',
+  appt_note: 'Notes', appt_note_hint: 'Questions for the doctor, papers to bring',
+  appt_delete_confirm: 'Delete this appointment?',
+  day_today: 'Today', day_tomorrow: 'Tomorrow', appt_in: 'in {0}', appt_done: 'Past',
+  appt_calendar: "Add to the phone's calendar",
+  appt_calendar_hint: "The phone's calendar reminds you a day before and 2 hours before, even with the app closed.",
+  appt_calendar_title: '{0}: appointment with {1}',
+  today_appts: 'Appointments soon', notify_appt: 'Appointment soon: {0}',
+  all_appts: 'All appointments', person_appts: 'Appointments', no_appts: 'No appointments coming up.',
+  kind_appointment: 'appointment',
+
+  sos: 'Emergency', emergency_title: 'Emergency cards', emergency_pick: 'Choose a person to see their card.',
+  emergency_card: 'Emergency card', call_ambulance: 'Call an ambulance (123)', call_contact: 'Call {0}',
+  em_age: 'Age', em_blood: 'Blood type', em_allergies: 'Allergies', em_no_allergies: 'No allergies recorded',
+  em_conditions: 'Long-term conditions', em_meds: 'Current medicines', em_no_meds: 'No current medicines',
+  em_contact: 'Emergency contact', em_share: 'Share the card', em_copied: 'Card copied',
+  em_offline: 'No internet connection. This is the last copy saved on this phone ({0}).',
+  em_saved_note: 'These cards are saved on this phone, locked with the family key, so they open without internet.',
+  em_none: 'No cards are saved on this phone.',
+  offline_title: 'No internet connection', offline_body: 'The app needs the internet, but the emergency cards open without it.',
+  open_emergency: 'Open emergency cards', retry: 'Try again',
 
   family_empty_title: 'Start with your family', family_empty_body: 'Add everyone at home who takes medicines. A name is enough.',
   add_person: 'Add a family member', edit_person: 'Edit details', new_person: 'New family member',
@@ -471,4 +529,12 @@ export function monthYear(ym) {
 /** Joins a list with the comma of the current language ("، " or ", "). */
 export function joinList(items) {
   return items.join(getLang() === 'ar' ? '، ' : ', ');
+}
+
+/** "الخميس، 26 نوفمبر" / "Thursday 26 November" (with the year when it isn't this year). */
+export function dateLong(ms) {
+  const d = new Date(ms);
+  const opts = { weekday: 'long', day: 'numeric', month: 'long' };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString(getLang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', opts);
 }

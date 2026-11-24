@@ -1,6 +1,6 @@
 # Family Health Assistant / منظّم صحة البيت — Plan
 
-Status: **approved 2026-11-24** (Arabic name منظّم صحة البيت; server-visible names/emails accepted; demo, so alarm and voice limits accepted). Phase 1 built and tested in demo mode (2026-11-24). Owner asked the same day for Modern Standard Arabic texts and for the home pharmacy now (moved forward from phase 2): both built and tested in demo mode.
+Status: **approved 2026-11-24** (Arabic name منظّم صحة البيت; server-visible names/emails accepted; demo, so alarm and voice limits accepted). Phase 1 built and tested in demo mode (2026-11-24). Owner asked the same day for Modern Standard Arabic texts and for the home pharmacy now (moved forward from phase 2): both built and tested in demo mode. Live on the real Supabase project and tested by the owner with two accounts (2026-11-24). Phase 2 (appointments, emergency cards) built and tested in demo mode the same day.
 
 - Repo and URL: `family-health-assistant` → https://algebratronics.com/family-health-assistant/
 - One line: one household keeps every family member's medicines, doses and health papers in
@@ -130,8 +130,20 @@ activity_log on record changes. Constraints (not null, checks, foreign keys) in 
 - Privacy: each box is an encrypted `stock` record; its server person_id is the household id
   (it belongs to the house, not one person), so patients don't see the pharmacy.
 
-**Phase 2 — safety:** appointments; emergency card per person (also cached on the device to open
-offline).
+**Phase 2 — safety (built 2026-11-24)**
+- **Appointments** (encrypted `appointment` records, server person_id = the person, so a patient
+  sees only their own): doctor or place, date and time, where, notes. Family tab → "Appointments"
+  (coming up / past), a person's page lists theirs, Today shows today's and tomorrow's. Owner,
+  admin and caregiver add / edit / delete. Reminders: a phone notification 2 hours before while
+  the app is open, and "add to the phone's calendar" (an .ics file with alarms a day before and
+  2 hours before) for a real reminder with the app closed.
+- **Emergency card** per person: red "Emergency" button in the header on every screen, and on each
+  person's page. Name, age, blood type, allergies (in red), long-term conditions, current
+  medicines with doses, emergency contact; buttons to call 123 and the contact; share as text.
+- **Offline:** after every change the cards are saved on the phone, encrypted with the family key
+  (the same protection as the key already kept there). With no internet the app shows an
+  offline screen that still opens the cards, with the time they were saved. Signing out deletes
+  the saved cards. The service worker also keeps the Supabase library so the app can start offline.
 **Phase 3 — papers and report:** encrypted photos of prescriptions and lab papers (Supabase
 Storage, encrypted before upload); doctor report as a printable Arabic page / PDF.
 **Phase 4 — reminders and helpers:** web push for dose times; key rotation; box-photo reading
