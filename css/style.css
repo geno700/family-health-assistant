@@ -232,6 +232,33 @@ legend { font-weight: 700; padding: 0; margin-bottom: .3rem; }
 .em-meds { margin: .2rem 0 0; padding-inline-start: 1.2rem; }
 .em-meds li { margin: .2rem 0; }
 
+/* ---------- Papers ---------- */
+.list-row > .icon { color: var(--green); flex: none; }
+.page-file { margin: 0; }
+.page-img { display: block; }
+.page-img img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+
+/* ---------- Doctor report ---------- */
+.report h2 { border-bottom: 2px solid var(--line); padding-bottom: .2rem; }
+.report-dl { display: grid; grid-template-columns: max-content 1fr; gap: .3rem .9rem; margin: 0; }
+.report-dl dt { color: var(--muted); }
+.report-dl dd { margin: 0; min-width: 0; }
+.report-list { margin: 0; padding-inline-start: 1.2rem; display: flex; flex-direction: column; gap: .4rem; }
+.report-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: .95rem; }
+.report-table th, .report-table td { border: 1px solid var(--line); padding: .35rem .4rem; text-align: center; overflow-wrap: anywhere; }
+.report-table th { font-size: .82rem; overflow-wrap: normal; hyphens: auto; }
+.report-table th:first-child, .report-table td:first-child { text-align: start; width: 34%; }
+.report-foot { margin-top: 1rem; }
+
+@media print {
+  :root { --page: #fff; --card: #fff; --text: #000; --muted: #444; --line: #bbb; --red: #b00; }
+  body { font-size: 12pt; }
+  .header, .tabs, .toasts, .update-bar, .no-print { display: none !important; }
+  .main { padding: 0; max-width: none; }
+  .report h2 { break-after: avoid; }
+  .report-list li, .report-table tr { break-inside: avoid; }
+}
+
 /* ---------- Dialogs, toasts, update bar ---------- */
 .dialog { border: 0; border-radius: 20px; padding: 1.2rem; width: min(92vw, 440px); background: var(--card); color: var(--text); }
 .dialog::backdrop { background: rgba(0, 0, 0, .45); }

@@ -2,9 +2,9 @@
 // as data-supabase.js and the same permission rules as the database (RLS), so demo mode
 // behaves like the real thing. Health records are stored encrypted here too.
 
-import { encryptJson, makeKeyCheck, newKeyBytes, saveDeviceKey } from './crypto.js';
+import { encryptJson, encryptBytes, makeKeyCheck, newKeyBytes, saveDeviceKey } from './crypto.js';
 
-const DB_KEY = 'fha.demo.db.v3'; // v3: appointments (v2: pharmacy + Modern Standard Arabic)
+const DB_KEY = 'fha.demo.db.v4'; // v4: papers + dose history (v3: appointments, v2: pharmacy + MSA)
 const USER_KEY = 'fha.demo.user';
 const WRITERS = ['owner', 'admin', 'caregiver'];
 const ADMINS = ['owner', 'admin'];
@@ -131,12 +131,40 @@ async function seed() {
   items.push(['appointment', uid(), { personId: p.mama, name: 'د. سامي (عيادة القلب)', at: at(1, 18, 30), place: 'مستشفى المدينة، الدور الثالث', note: 'أحضري نتيجة رسم القلب الأخيرة.', createdAt: created }]);
   items.push(['appointment', uid(), { personId: p.baba, name: 'معمل التحاليل', at: at(5, 9, 0), place: 'معمل النور', note: 'صائمًا 8 ساعات قبل التحليل.', createdAt: created }]);
   items.push(['appointment', uid(), { personId: p.baba, name: 'د. منى (السكري)', at: at(-30, 17, 0), place: '', note: '', createdAt: created }]);
+  // Dose history for Mum's medicines, up to the day before the pharmacy count (so stock is unchanged)
+  items.filter(([k, , d]) => k === 'medicine' && d.personId === p.mama).forEach(([, medId, m]) => {
+    for (let i = 14; i >= 2; i--) {
+      for (const time of m.times) {
+        const [h, mi] = time.split(':').map(Number);
+        const d = new Date(today); d.setDate(d.getDate() - i); d.setHours(h, mi, 0, 0);
+        const skipped = (i === 6 && time === m.times[0]) || (i === 9 && m.times.length > 1 && time === m.times[1]);
+        if (i === 4 && time === m.times[0]) continue; // one dose nobody recorded
+        items.push(['dose_log', uid(), { medicineId: medId, personId: p.mama, scheduledAt: d.getTime(), status: skipped ? 'SKIPPED' : 'TAKEN', amount: m.doseAmount, actedAt: d.getTime() + 600000, actedBy: 'سارة' }]);
+      }
+    }
+  });
+  // Papers: drawn sample pages (clearly marked as samples), encrypted like real ones
+  const samplePapers = [
+    { personId: p.mama, title: 'روشتة د. سامي', kind: 'PRESCRIPTION', date: iso(start), doctor: 'د. سامي (عيادة القلب)', lines: ['Rx', 'Concor 5 mg', '1 x 2', 'Eltroxin 50 mcg', '1 x 1'] },
+    { personId: p.baba, title: 'تحليل السكر', kind: 'LAB', date: iso(start), doctor: 'معمل النور', lines: ['LAB REPORT', 'Test: ......', 'Result: ......'] },
+  ];
+  const files = [];
+  for (const sp of samplePapers) {
+    const bytes = await samplePage(sp.lines);
+    const { data, iv } = await encryptBytes(key, bytes);
+    const fileId = uid();
+    const path = `${gid}/${sp.personId}/${fileId}`;
+    files.push([path, data]);
+    const { lines, ...meta } = sp;
+    items.push(['paper', uid(), { ...meta, note: '', files: [{ id: fileId, path, iv, type: 'image/jpeg', size: bytes.length }], createdAt: created }]);
+  }
+  try { await filesTx('readwrite', (s) => { s.clear(); files.forEach(([path, data]) => s.put(data, path)); }); } catch { /* no IndexedDB: papers show "couldn't load" */ }
   for (const [kind, id, data] of items) {
     const personId = kind === 'person' ? id : kind === 'stock' ? gid : data.personId;
     const c = await encryptJson(key, { ...data, id });
     db.records.push({ id, group_id: gid, kind, person_id: personId, cipher: c.cipher, iv: c.iv, version: 1, created_at: t0, created_by: 'demo-owner', updated_at: t0, updated_by: 'demo-owner', deleted_at: null });
   }
-  try { localStorage.removeItem('fha.demo.db.v2'); } catch { /* ignore */ } // older sample data
+  try { ['fha.demo.db.v2', 'fha.demo.db.v3'].forEach((k) => localStorage.removeItem(k)); } catch { /* ignore */ } // older sample data
   // The demo device already "knows" the family key, as if the owner typed it
   saveDeviceKey(gid, key);
   store(db);
@@ -433,6 +461,74 @@ export async function ownerSetDisabled(groupId, disabled) {
   store(db);
 }
 
+/** A plain drawn page for the sample papers, marked SAMPLE so it never looks real. */
+async function samplePage(lines) {
+  const c = document.createElement('canvas');
+  c.width = 800; c.height = 1000;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fffdf6'; g.fillRect(0, 0, 800, 1000);
+  g.strokeStyle = '#1F6F5C'; g.lineWidth = 6; g.strokeRect(30, 30, 740, 940);
+  g.fillStyle = '#1E2A26'; g.font = 'bold 56px sans-serif';
+  lines.forEach((l, i) => g.fillText(l, 80, 160 + i * 90));
+  g.save(); g.translate(400, 760); g.rotate(-0.25);
+  g.fillStyle = 'rgba(198,40,40,.35)'; g.font = 'bold 110px sans-serif'; g.textAlign = 'center';
+  g.fillText('SAMPLE', 0, 0); g.restore();
+  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.8));
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+// ---------- Encrypted files (papers) ----------
+// Kept in this browser's IndexedDB (localStorage is too small for photos), with the same
+// rules as the Storage policies: path <groupId>/<personId>/<fileId>; members read (a patient
+// only their own person); owner/admin/caregiver add and remove.
+
+const FILES_DB = 'fha-demo-files';
+
+function filesDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(FILES_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('files');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function filesTx(mode, fn) {
+  const db = await filesDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('files', mode);
+    const out = fn(tx.objectStore('files'));
+    tx.oncomplete = () => { db.close(); resolve(out?.result); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+function checkPath(path, write) {
+  const [g, p, f] = String(path).split('/');
+  if (!g || !p || !f) fail('not_allowed');
+  const db = load();
+  if (write) return needRole(db, g, WRITERS);
+  const m = memberOf(db, g, me().id) || fail('not_allowed');
+  if (m.role === 'patient' && m.person_id !== p) fail('not_allowed');
+  return m;
+}
+
+export async function uploadFile(path, bytes) {
+  checkPath(path, true);
+  await filesTx('readwrite', (s) => s.put(bytes, path));
+}
+
+export async function downloadFile(path) {
+  checkPath(path, false);
+  const data = await filesTx('readonly', (s) => s.get(path));
+  return data || fail('not_found');
+}
+
+export async function removeFiles(paths) {
+  paths.forEach((p) => checkPath(p, true));
+  await filesTx('readwrite', (s) => paths.forEach((p) => s.delete(p)));
+}
+
 // ---------- Demo only ----------
 
 export function demoUsers() {
@@ -446,6 +542,7 @@ export function demoSwitchUser(userId) {
 
 export async function demoReset() {
   localStorage.removeItem(DB_KEY);
+  try { await filesTx('readwrite', (s) => s.clear()); } catch { /* no files yet */ }
   await seed();
   emit('SIGNED_IN');
 }

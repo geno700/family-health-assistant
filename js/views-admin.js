@@ -144,7 +144,7 @@ export function render(main, { user }) {
       };
       $('#delete').onclick = async () => {
         if (!(await confirmDialog(t('delete_house_confirm'), { danger: true, okLabel: t('delete_house'), typeToConfirm: g.name }))) return;
-        try { await api.deleteGroup(g.id); toast(t('deleted')); location.hash = '#/today'; rerender(); } catch { toast(t('error_generic'), 'error'); }
+        try { await store.removeAllPaperFiles(); await api.deleteGroup(g.id); toast(t('deleted')); location.hash = '#/today'; rerender(); } catch { toast(t('error_generic'), 'error'); }
       };
     }
   };

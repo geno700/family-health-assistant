@@ -7,6 +7,7 @@ import { doseLine, medTitle, howOften } from './doses.js';
 import { esc, icon, toast, confirmDialog, emptyState, $ } from './ui.js';
 import { go } from './router.js';
 import { apptRow, isPast } from './views-appts.js';
+import { paperRow } from './views-papers.js';
 
 const COLORS = ['#2E7D6B', '#3B6EA5', '#8E5BA8', '#B0683A', '#5C7A2E', '#A2496A'];
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -63,6 +64,7 @@ function page(main, id) {
     const can = store.canWrite();
     const meds = store.meds().filter((m) => m.personId === id);
     const appts = store.appts().filter((a) => a.personId === id && !isPast(a));
+    const papers = store.papers().filter((x) => x.personId === id);
     main.innerHTML = `
       <section class="page">
         <a class="back" href="#/family">${esc(t('back'))}</a>
@@ -73,7 +75,9 @@ function page(main, id) {
           ${(p.allergies || []).length ? `<p class="danger-text">${esc(t('allergy_line', p.allergies.map(ltr).join('، ')))}</p>` : ''}
           ${(p.conditions || []).length ? `<p>${esc(t('conditions_line', p.conditions.join('، ')))}</p>` : ''}
           ${p.contactPhone ? `<p><a class="btn btn-secondary" href="tel:${esc(p.contactPhone)}">${esc(p.contactName || '')} ${esc(ltr(p.contactPhone))}</a></p>` : ''}
-          <a class="btn btn-danger-outline" href="#/emergency/${esc(id)}">${icon('alert')}${esc(t('emergency_card'))}</a>
+          <div class="btn-row">
+            <a class="btn btn-danger-outline" href="#/emergency/${esc(id)}">${icon('alert')}${esc(t('emergency_card'))}</a>
+            <a class="btn btn-secondary" href="#/report/${esc(id)}">${icon('print')}${esc(t('doctor_report'))}</a></div>
           ${can ? `<div class="btn-row">
             <a class="btn btn-secondary" href="#/family/${esc(id)}/edit">${icon('edit')}${esc(t('edit_person'))}</a>
             <button class="btn btn-danger-outline" id="del">${icon('trash')}${esc(t('delete'))}</button></div>` : ''}
@@ -87,6 +91,9 @@ function page(main, id) {
         <h2>${esc(t('person_appts'))}</h2>
         ${appts.length ? `<div class="card list">${appts.map((a) => apptRow(a, { showPerson: false })).join('')}</div>` : `<p class="muted">${esc(t('no_appts'))}</p>`}
         ${can ? `<a class="btn btn-secondary" href="#/appts/new/${esc(id)}">${icon('plus')}${esc(t('add_appt'))}</a>` : ''}
+        <h2>${esc(t('papers'))}</h2>
+        ${papers.length ? `<div class="card list">${papers.map(paperRow).join('')}</div>` : `<p class="muted">${esc(t('papers_empty'))}</p>`}
+        ${can ? `<a class="btn btn-secondary" href="#/papers/new/${esc(id)}">${icon('plus')}${esc(t('add_paper'))}</a>` : ''}
       </section>`;
     const del = $('#del');
     if (del) del.onclick = async () => {

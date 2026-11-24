@@ -45,6 +45,11 @@ It is served at https://algebratronics.com/family-health-assistant/. All paths a
 - Red "Emergency" button (top): each person's card, call 123 or their contact, share as text.
 - Turn on airplane mode after opening the app once: the offline screen still opens the cards.
 
+## Phase 3 to try in the demo
+- A person's page → Medical papers: open the sample prescription (marked SAMPLE), add a paper
+  with the camera or from the phone (photos or PDF), add or delete pages.
+- A person's page → Report for the doctor → Print or save as PDF.
+
 ## How privacy works
 
 - Creating a household makes a 256-bit **family key** in the owner's browser and shows it once

@@ -83,6 +83,20 @@ export async function decryptJson(keyBytes, cipher, iv) {
   return JSON.parse(dec.decode(data));
 }
 
+/** Encrypts file bytes (a photo or PDF). Returns { data: Uint8Array, iv: base64 }. */
+export async function encryptBytes(keyBytes, bytes) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await importKey(keyBytes);
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes);
+  return { data: new Uint8Array(data), iv: toB64(iv) };
+}
+
+/** Decrypts file bytes. Throws if the key is wrong or the file was changed. */
+export async function decryptBytes(keyBytes, data, iv) {
+  const key = await importKey(keyBytes);
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(iv) }, key, data));
+}
+
 /** The encrypted test value stored with the household, used to check a typed key. */
 export function makeKeyCheck(keyBytes) {
   return encryptJson(keyBytes, KEY_CHECK_TEXT);

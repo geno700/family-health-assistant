@@ -13,6 +13,8 @@ import * as pharmacyView from './views-pharmacy.js';
 import * as familyView from './views-family.js';
 import * as apptsView from './views-appts.js';
 import * as emergencyView from './views-emergency.js';
+import * as papersView from './views-papers.js';
+import * as reportView from './views-report.js';
 import * as settingsView from './views-settings.js';
 import * as adminView from './views-admin.js';
 import * as ownerView from './views-owner.js';
@@ -99,13 +101,15 @@ async function render() {
 
   shell.classList.remove('bare');
   drawHeader(true);
-  drawTabs(route.name === 'appts' ? 'family' : route.name);
+  drawTabs(['appts', 'papers', 'report'].includes(route.name) ? 'family' : route.name);
   const views = {
     today: () => todayView.render(main),
     meds: () => medsView.render(main, route.params),
     pharmacy: () => pharmacyView.render(main, route.params),
     family: () => familyView.render(main, route.params),
     appts: () => apptsView.render(main, route.params),
+    papers: () => papersView.render(main, route.params),
+    report: () => reportView.render(main, route.params),
     emergency: () => {
       const draw = () => emergencyView.render(main, route.params, { cards: store.emergencyCards() });
       draw();

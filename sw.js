@@ -1,13 +1,13 @@
 // Service worker: app files cached (versioned), index.html network-first, Supabase never cached.
 // Bump VERSION whenever any app file changes so phones pick up the new version.
 
-const VERSION = 'fha-v5';
+const VERSION = 'fha-v6';
 const FILES = [
   './', './index.html', './config.js', './manifest.webmanifest', './css/style.css',
   './js/app.js', './js/router.js', './js/data.js', './js/data-demo.js', './js/data-supabase.js',
   './js/store.js', './js/crypto.js', './js/i18n.js', './js/ui.js', './js/doses.js',
   './js/views-auth.js', './js/views-today.js', './js/views-meds.js', './js/views-pharmacy.js', './js/stock.js', './js/views-family.js',
-  './js/views-appts.js', './js/views-emergency.js',
+  './js/views-appts.js', './js/views-emergency.js', './js/views-papers.js', './js/views-report.js', './js/files.js',
   './js/views-settings.js', './js/views-admin.js', './js/views-owner.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
 ];

@@ -158,6 +158,29 @@ const ar = {
   offline_title: 'لا يوجد اتصال بالإنترنت', offline_body: 'يحتاج التطبيق إلى الإنترنت، أما بطاقات الطوارئ فتُفتح بدونه.',
   open_emergency: 'فتح بطاقات الطوارئ', retry: 'إعادة المحاولة',
 
+  // Papers
+  papers: 'الأوراق الطبية', papers_empty: 'لا توجد أوراق محفوظة.', add_paper: 'إضافة ورقة', new_paper: 'ورقة جديدة', edit_paper: 'تعديل بيانات الورقة',
+  paper_title: 'العنوان', paper_title_hint: 'روشتة د. سامي، تحليل السكر…', paper_title_required: 'اكتب عنوانًا للورقة',
+  paper_kind: 'النوع', pk_PRESCRIPTION: 'روشتة', pk_LAB: 'تحليل', pk_SCAN: 'أشعة', pk_REPORT: 'تقرير طبي', pk_OTHER: 'أخرى',
+  paper_date: 'التاريخ', paper_doctor: 'الطبيب أو الجهة', paper_note: 'ملاحظات',
+  paper_files: 'الصفحات', take_photo: 'تصوير بالكاميرا', pick_files: 'اختيار من الهاتف (صور أو PDF)',
+  paper_files_required: 'أضف صورة أو ملفًا واحدًا على الأقل',
+  paper_saving: 'جارٍ القفل والرفع… ({0} من {1})',
+  paper_lock_note: 'تُقفل الصور بمفتاح العائلة على هاتفك قبل رفعها، فلا يستطيع الخادم رؤيتها. ولا يقرأ التطبيق ما فيها.',
+  paper_delete_confirm: 'حذف هذه الورقة وجميع صفحاتها؟', page_delete_confirm: 'حذف هذه الصفحة؟', delete_page: 'حذف الصفحة', add_pages: 'إضافة صفحات',
+  open_file: 'فتح بالحجم الكامل', open_pdf: 'فتح ملف PDF', page_n: 'صفحة {0}', loading_page: 'جارٍ فتح الصفحة…',
+  file_bad: 'تعذّر فتح هذا الملف. اختر صورة (JPG أو PNG) أو ملف PDF.', file_too_big: 'ملف PDF أكبر من 5 ميجابايت.',
+  file_load_failed: 'تعذّر تحميل هذه الصفحة.', remove_file: 'إزالة', kind_paper: 'ورقة',
+
+  // Doctor report
+  doctor_report: 'تقرير للطبيب', report_title: 'تقرير صحي: {0}', report_made: 'أُعدّ في {0}',
+  report_details: 'البيانات الأساسية', report_meds: 'الأدوية الحالية', report_since: 'منذ {0}', report_until: 'حتى {0}',
+  report_stopped: 'أدوية متوقفة', report_doses: 'الجرعات في آخر 14 يومًا', report_med: 'الدواء',
+  report_taken: 'أُخذت', report_skipped: 'تُخطّيت', report_unrecorded: 'لم تُسجّل',
+  report_as_needed: 'عند اللزوم: أُخذ {0} في آخر 14 يومًا', report_appts: 'المواعيد القادمة', report_papers: 'الأوراق المحفوظة في التطبيق',
+  report_footer: 'أُعدّ هذا التقرير من تطبيق منظّم صحة البيت بناءً على ما سجّلته العائلة. لا يتضمن أي تشخيص أو نصيحة طبية.',
+  print_report: 'طباعة أو حفظ PDF', report_none: 'لا يوجد', report_contact: 'شخص للطوارئ',
+
   // Family
   family_empty_title: 'ابدأ بأفراد العائلة', family_empty_body: 'أضف كل من يتناول أدوية في المنزل. يكفي الاسم.',
   add_person: 'إضافة فرد من العائلة', edit_person: 'تعديل البيانات', new_person: 'فرد جديد',
@@ -176,7 +199,7 @@ const ar = {
   // Settings
   settings_lang: 'اللغة', lang_ar: 'العربية', lang_en: 'English',
   settings_data: 'البيانات', backup: 'حفظ نسخة احتياطية (ملف)', restore: 'الاستعادة من نسخة احتياطية',
-  backup_hint: 'ملف النسخة الاحتياطية غير مقفل بمفتاح العائلة، فمن يحصل عليه يستطيع قراءته. احفظه في مكان آمن.',
+  backup_hint: 'ملف النسخة الاحتياطية غير مقفل بمفتاح العائلة، فمن يحصل عليه يستطيع قراءته. احفظه في مكان آمن. ولا يتضمن صور الأوراق الطبية.',
   restore_confirm: 'استعادة البيانات من هذا الملف؟ ستحل محتويات الملف محل نظيراتها في المنزل.',
   restored: 'تمت استعادة {0} عنصر', restore_bad: 'هذا الملف ليس نسخة احتياطية من التطبيق.',
   export_meds_csv: 'تصدير الأدوية (CSV)', export_doses_csv: 'تصدير الجرعات (CSV)',
@@ -352,6 +375,27 @@ const en = {
   offline_title: 'No internet connection', offline_body: 'The app needs the internet, but the emergency cards open without it.',
   open_emergency: 'Open emergency cards', retry: 'Try again',
 
+  papers: 'Medical papers', papers_empty: 'No papers saved.', add_paper: 'Add a paper', new_paper: 'New paper', edit_paper: 'Edit paper details',
+  paper_title: 'Title', paper_title_hint: "Dr Sami's prescription, sugar test…", paper_title_required: 'Enter a title for the paper',
+  paper_kind: 'Type', pk_PRESCRIPTION: 'Prescription', pk_LAB: 'Lab test', pk_SCAN: 'Scan / X-ray', pk_REPORT: 'Medical report', pk_OTHER: 'Other',
+  paper_date: 'Date', paper_doctor: 'Doctor or place', paper_note: 'Notes',
+  paper_files: 'Pages', take_photo: 'Take a photo', pick_files: 'Choose from the phone (photos or PDF)',
+  paper_files_required: 'Add at least one photo or file',
+  paper_saving: 'Locking and uploading… ({0} of {1})',
+  paper_lock_note: "Photos are locked with the family key on your phone before upload, so the server can't see them. The app doesn't read what they say.",
+  paper_delete_confirm: 'Delete this paper and all its pages?', page_delete_confirm: 'Delete this page?', delete_page: 'Delete page', add_pages: 'Add pages',
+  open_file: 'Open full size', open_pdf: 'Open the PDF', page_n: 'Page {0}', loading_page: 'Opening the page…',
+  file_bad: "Couldn't open that file. Choose a photo (JPG or PNG) or a PDF.", file_too_big: 'The PDF is larger than 5 MB.',
+  file_load_failed: "Couldn't load this page.", remove_file: 'Remove', kind_paper: 'paper',
+
+  doctor_report: 'Report for the doctor', report_title: 'Health report: {0}', report_made: 'Made on {0}',
+  report_details: 'Details', report_meds: 'Current medicines', report_since: 'since {0}', report_until: 'until {0}',
+  report_stopped: 'Stopped medicines', report_doses: 'Doses in the last 14 days', report_med: 'Medicine',
+  report_taken: 'Taken', report_skipped: 'Skipped', report_unrecorded: 'Not recorded',
+  report_as_needed: 'As needed: taken {0} in the last 14 days', report_appts: 'Upcoming appointments', report_papers: 'Papers saved in the app',
+  report_footer: 'Made with Family Health Assistant from what the family recorded. It contains no diagnosis or medical advice.',
+  print_report: 'Print or save as PDF', report_none: 'None', report_contact: 'Emergency contact',
+
   family_empty_title: 'Start with your family', family_empty_body: 'Add everyone at home who takes medicines. A name is enough.',
   add_person: 'Add a family member', edit_person: 'Edit details', new_person: 'New family member',
   person_name: 'Name', person_name_hint: 'Mum, Dad, Ahmed…', person_name_required: 'Enter the name',
@@ -368,7 +412,7 @@ const en = {
 
   settings_lang: 'Language', lang_ar: 'العربي', lang_en: 'English',
   settings_data: 'Data', backup: 'Save a backup (file)', restore: 'Restore from a backup',
-  backup_hint: "The backup file isn't locked with the family key: anyone with the file can read it. Keep it somewhere safe.",
+  backup_hint: "The backup file isn't locked with the family key: anyone with the file can read it. Keep it somewhere safe. It doesn't include the photos of papers.",
   restore_confirm: 'Restore data from this file? Items in the file replace the same items in this household.',
   restored: '{0} items restored', restore_bad: "That file isn't a backup from this app.",
   export_meds_csv: 'Export medicines (CSV)', export_doses_csv: 'Export doses (CSV)',
@@ -460,10 +504,13 @@ const arUnits = {
   SPRAY: { one: 'بخة واحدة', two: 'بختان', few: 'بخات', many: 'بخة', unit: 'بخة', plural: 'البخات' },
   PACK: { one: 'عبوة واحدة', two: 'عبوتان', few: 'عبوات', many: 'عبوة', unit: 'عبوة', plural: 'العبوات' },
   DAY: { one: 'يوم واحد', two: 'يومين', few: 'أيام', many: 'يومًا', unit: 'يوم', plural: 'الأيام' },
+  PAGE: { one: 'صفحة واحدة', two: 'صفحتان', few: 'صفحات', many: 'صفحة', unit: 'صفحة', plural: 'الصفحات' },
+  TIME: { one: 'مرة واحدة', two: 'مرتين', few: 'مرات', many: 'مرة', unit: 'مرة', plural: 'المرات' },
 };
 const enUnits = {
   TABLET: ['tablet', 'tablets'], CAPSULE: ['capsule', 'capsules'], DROPS: ['drop', 'drops'],
   INJECTION: ['injection', 'injections'], SPRAY: ['puff', 'puffs'], PACK: ['pack', 'packs'], DAY: ['day', 'days'],
+  PAGE: ['page', 'pages'], TIME: ['time', 'times'],
 };
 
 function num(x) {

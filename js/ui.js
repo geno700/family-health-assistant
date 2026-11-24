@@ -143,6 +143,9 @@ export const ICONS = {
   search: '<svg viewBox="0 0 24 24" class="icon"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
   alert: '<svg viewBox="0 0 24 24" class="icon"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>',
   phone: '<svg viewBox="0 0 24 24" class="icon"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>',
+  paper: '<svg viewBox="0 0 24 24" class="icon"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" class="icon"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  print: '<svg viewBox="0 0 24 24" class="icon"><path d="M7 9V3h10v6M7 17H4V9h16v8h-3"/><path d="M7 14h10v7H7z"/></svg>',
   home: '<svg viewBox="0 0 24 24" class="icon"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
   refresh: '<svg viewBox="0 0 24 24" class="icon"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
 };

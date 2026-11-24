@@ -1,6 +1,6 @@
 # Family Health Assistant / منظّم صحة البيت — Plan
 
-Status: **approved 2026-11-24** (Arabic name منظّم صحة البيت; server-visible names/emails accepted; demo, so alarm and voice limits accepted). Phase 1 built and tested in demo mode (2026-11-24). Owner asked the same day for Modern Standard Arabic texts and for the home pharmacy now (moved forward from phase 2): both built and tested in demo mode. Live on the real Supabase project and tested by the owner with two accounts (2026-11-24). Phase 2 (appointments, emergency cards) built and tested in demo mode the same day.
+Status: **approved 2026-11-24** (Arabic name منظّم صحة البيت; server-visible names/emails accepted; demo, so alarm and voice limits accepted). Phase 1 built and tested in demo mode (2026-11-24). Owner asked the same day for Modern Standard Arabic texts and for the home pharmacy now (moved forward from phase 2): both built and tested in demo mode. Live on the real Supabase project and tested by the owner with two accounts (2026-11-24). Phase 2 (appointments, emergency cards) built the same day and checked on the owner's phone. Phase 3 (encrypted papers, doctor report) built and tested in demo mode the same day.
 
 - Repo and URL: `family-health-assistant` → https://algebratronics.com/family-health-assistant/
 - One line: one household keeps every family member's medicines, doses and health papers in
@@ -144,8 +144,19 @@ activity_log on record changes. Constraints (not null, checks, foreign keys) in 
   (the same protection as the key already kept there). With no internet the app shows an
   offline screen that still opens the cards, with the time they were saved. Signing out deletes
   the saved cards. The service worker also keeps the Supabase library so the app can start offline.
-**Phase 3 — papers and report:** encrypted photos of prescriptions and lab papers (Supabase
-Storage, encrypted before upload); doctor report as a printable Arabic page / PDF.
+**Phase 3 — papers and report (built 2026-11-24)**
+- **Papers** on each person's page: title, type (prescription, lab test, scan, medical report,
+  other), date, doctor or place, notes, and one or more pages (camera photo, photos from the
+  phone, or PDF up to 5 MB). Photos are shrunk to 1600 px JPEG, then **encrypted on the phone**
+  and uploaded to the private Storage bucket `fha-papers` at `<household>/<person>/<file>`; the
+  record keeps only the path and IV. Pages are downloaded and decrypted only when opened. Add
+  pages, delete a page, edit details, delete the paper (its files go too). Storage policies use
+  the same rules as records (patient: own person only; writers add/remove). The app never reads
+  what a paper says. Backups keep paper details, not the photos.
+- **Report for the doctor** (`#/report/<person>`): details, current and stopped medicines,
+  doses taken / skipped / not recorded in the last 14 days, as-needed count, upcoming
+  appointments, papers list, and a footer saying it holds no diagnosis or advice. "Print or save
+  as PDF" uses the phone's print dialog; print styles hide the app's header and buttons.
 **Phase 4 — reminders and helpers:** web push for dose times; key rotation; box-photo reading
 in the browser.
 

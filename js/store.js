@@ -3,7 +3,8 @@
 // so views work with plain objects and never see cipher text or call the backend for records.
 
 import { api } from './data.js';
-import { decodeKeyCode, keyMatches, loadDeviceKey, saveDeviceKey, encryptJson, decryptJson } from './crypto.js';
+import { decodeKeyCode, keyMatches, loadDeviceKey, saveDeviceKey, encryptJson, decryptJson, encryptBytes, decryptBytes } from './crypto.js';
+import { prepareFile } from './files.js';
 import { isoDate } from './doses.js';
 
 const ACTIVE_KEY = 'fha.active';
@@ -19,6 +20,7 @@ const state = {
   logs: new Map(), // `${medicineId}|${scheduledAt}` -> log (has .id = record id)
   stock: new Map(), // home pharmacy boxes (record person_id = household id: not one person's)
   appts: new Map(), // appointments (record person_id = the person)
+  papers: new Map(), // papers: details here, encrypted pages in file storage
   unreadable: 0,
   loaded: false,
 };
@@ -44,7 +46,7 @@ export function setUser(userId) {
   state.userId = userId;
   state.active = null;
   state.key = null;
-  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear();
+  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear(); state.papers.clear(); forgetFileUrls();
   state.loaded = false;
   state.unreadable = 0;
 }
@@ -67,7 +69,7 @@ function setActiveInternal(m) {
   }
   state.active = m;
   state.key = m ? loadDeviceKey(m.group.id) : null;
-  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear();
+  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear(); state.papers.clear(); forgetFileUrls();
   state.loaded = false;
   state.unreadable = 0;
   if (m) { try { localStorage.setItem(ACTIVE_KEY, m.group.id); } catch { /* ignore */ } }
@@ -116,7 +118,7 @@ export async function reload() {
   const g = group();
   if (!g || !state.key) return;
   const rows = await api.listRecords(g.id);
-  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear();
+  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear(); state.papers.clear(); forgetFileUrls();
   state.unreadable = 0;
   await Promise.all(rows.map(async (r) => {
     try {
@@ -127,6 +129,7 @@ export async function reload() {
       else if (r.kind === 'dose_log') state.logs.set(`${obj.medicineId}|${obj.scheduledAt}`, obj);
       else if (r.kind === 'stock') state.stock.set(r.id, obj);
       else if (r.kind === 'appointment') state.appts.set(r.id, obj);
+      else if (r.kind === 'paper') state.papers.set(r.id, obj);
     } catch {
       state.unreadable += 1; // made with another key: skipped, never shown garbled
     }
@@ -169,6 +172,7 @@ export async function deletePerson(id) {
   const g = group();
   for (const m of meds().filter((x) => x.personId === id)) await api.deleteRecord(g.id, m.id);
   for (const a of appts().filter((x) => x.personId === id)) await api.deleteRecord(g.id, a.id);
+  for (const p of papers().filter((x) => x.personId === id)) await deletePaper(p.id, { quiet: true });
   await api.deleteRecord(g.id, id);
   state.people.delete(id);
   meds().filter((x) => x.personId === id).forEach((m) => state.meds.delete(m.id));
@@ -225,6 +229,95 @@ export async function deleteAppt(id) {
   await api.deleteRecord(group().id, id);
   state.appts.delete(id);
   changed();
+}
+
+// ---------- Papers ----------
+// A paper is { id, personId, title, kind, date, doctor, note, files: [{ id, path, iv, type, size }] }.
+// Each page is encrypted here and uploaded to <householdId>/<personId>/<fileId>; the record only
+// keeps where it is and its IV. Pages are downloaded and decrypted only when a paper is opened.
+
+/** Papers, newest date first. */
+export const papers = () => [...state.papers.values()].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || 0) - (a.createdAt || 0));
+export const paper = (id) => state.papers.get(id) || null;
+
+/** Encrypts and uploads chosen files; returns their entries. onStep(done, total) reports progress. */
+async function uploadPages(personId, files, onStep) {
+  const g = group();
+  const done = [];
+  if (files.length) onStep?.(0, files.length);
+  try {
+    for (const file of files) {
+      const { bytes, type } = await prepareFile(file);
+      const { data, iv } = await encryptBytes(state.key, bytes);
+      const id = newId();
+      const path = `${g.id}/${personId}/${id}`;
+      await api.uploadFile(path, data);
+      done.push({ id, path, iv, type, size: bytes.length });
+      onStep?.(done.length, files.length);
+    }
+  } catch (e) {
+    // Don't leave half a paper behind
+    try { await api.removeFiles(done.map((f) => f.path)); } catch { /* best effort */ }
+    throw e;
+  }
+  return done;
+}
+
+/** Saves a paper's details, uploading any new files as extra pages. The person can't change later. */
+export async function savePaper(p, newFiles = [], onStep) {
+  const obj = { createdAt: Date.now(), files: [], ...p, id: p.id || newId() };
+  const added = await uploadPages(obj.personId, newFiles, onStep);
+  obj.files = [...(obj.files || []), ...added];
+  try {
+    const saved = await put('paper', obj.personId, obj);
+    state.papers.set(saved.id, saved);
+    changed();
+    return saved;
+  } catch (e) {
+    try { await api.removeFiles(added.map((f) => f.path)); } catch { /* best effort */ }
+    throw e;
+  }
+}
+
+export async function deletePaperPage(paperId, fileId) {
+  const p = paper(paperId);
+  const f = p?.files.find((x) => x.id === fileId);
+  if (!f) return;
+  const saved = await put('paper', p.personId, { ...p, files: p.files.filter((x) => x.id !== fileId) });
+  state.papers.set(saved.id, saved);
+  try { await api.removeFiles([f.path]); } catch { /* the record no longer points at it */ }
+  changed();
+}
+
+export async function deletePaper(id, { quiet = false } = {}) {
+  const p = paper(id);
+  if (!p) return;
+  await api.deleteRecord(group().id, id);
+  try { await api.removeFiles(p.files.map((f) => f.path)); } catch { /* the record is gone already */ }
+  state.papers.delete(id);
+  if (!quiet) changed();
+}
+
+/** Every page file of the household (used before deleting the whole household). */
+export async function removeAllPaperFiles() {
+  const paths = papers().flatMap((p) => p.files.map((f) => f.path));
+  for (let i = 0; i < paths.length; i += 100) await api.removeFiles(paths.slice(i, i + 100));
+}
+
+const fileUrls = new Map();
+function forgetFileUrls() {
+  fileUrls.forEach((u) => URL.revokeObjectURL(u));
+  fileUrls.clear();
+}
+
+/** Downloads and decrypts one page; returns an object URL (kept for this session). */
+export async function fileUrl(f) {
+  if (fileUrls.has(f.id)) return fileUrls.get(f.id);
+  const data = await api.downloadFile(f.path);
+  const bytes = await decryptBytes(state.key, data, f.iv);
+  const url = URL.createObjectURL(new Blob([bytes], { type: f.type }));
+  fileUrls.set(f.id, url);
+  return url;
 }
 
 // ---------- Emergency cards ----------
@@ -323,6 +416,7 @@ export function exportData() {
     doseLogs: logs(),
     stock: stockBoxes(),
     appointments: appts(),
+    papers: papers(), // details only: the photos stay in the household's file storage
   };
 }
 
@@ -353,6 +447,8 @@ export async function importData(data) {
     if (personId) { await put('dose_log', personId, { ...l, id: map(l.id), medicineId }); n += 1; }
   }
   for (const b of data.stock || []) { await put('stock', group().id, { ...b, id: map(b.id) }); n += 1; }
+  // Papers point at files stored for this household, so they come back only into the same one
+  if (sameHouse) for (const p of data.papers || []) { await put('paper', p.personId, p); n += 1; }
   for (const a of data.appointments || []) {
     const personId = map(a.personId);
     if (personId) { await put('appointment', personId, { ...a, id: map(a.id), personId }); n += 1; }

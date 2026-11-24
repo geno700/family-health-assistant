@@ -122,6 +122,25 @@ export async function deleteRecord(groupId, id) {
   check(await sb.from('records').update({ deleted_at: new Date().toISOString() }).eq('group_id', groupId).eq('id', id));
 }
 
+// ---------- Encrypted files (papers) ----------
+// Path: <groupId>/<personId>/<fileId>. The bytes are already encrypted; Storage rules in schema.sql.
+
+const BUCKET = 'fha-papers';
+
+export async function uploadFile(path, bytes) {
+  const blob = new Blob([bytes], { type: 'application/octet-stream' });
+  check(await sb.storage.from(BUCKET).upload(path, blob, { contentType: 'application/octet-stream', upsert: false }));
+}
+
+export async function downloadFile(path) {
+  const blob = check(await sb.storage.from(BUCKET).download(path));
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+export async function removeFiles(paths) {
+  if (paths.length) check(await sb.storage.from(BUCKET).remove(paths));
+}
+
 export async function listActivity(groupId, limit = 100) {
   return check(await sb.rpc('list_activity', { p_group: groupId, p_limit: limit }));
 }

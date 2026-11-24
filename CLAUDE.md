@@ -63,6 +63,12 @@ app replaces it as a demo); its lessons apply where they fit.
   sample data changes. sw.js VERSION is now fha-v5; bump it on every app file change.
 - 2026-11-24 (phase 2): appointments are `appointment` records (person_id = the person). Real
   reminders with the app closed come from an .ics file for the phone's calendar, not the app.
+- 2026-11-24 (phase 3): paper pages are encrypted in the browser (`encryptBytes`) and stored in
+  the private bucket `fha-papers` (accepts only application/octet-stream, 6 MB) at
+  `<household>/<person>/<file>`; storage policies call `fha.paper_path_ok`. The demo keeps files in
+  IndexedDB (`fha-demo-files`). A paper's person can't change (the path depends on it). Deleting a
+  household removes its files from the browser first (Supabase blocks deleting storage rows in SQL).
+  Demo data is `fha.demo.db.v4`; sw.js VERSION fha-v6.
 - 2026-11-24 (phase 2): emergency cards are saved on the device as `fha.sos.<householdId>`,
   encrypted with the family key, refreshed after every change, deleted on sign out. They open
   offline from the offline screen. On phones the header hides the app name (icon only) to fit
@@ -89,3 +95,7 @@ app replaces it as a demo); its lessons apply where they fit.
   needed (the records kind check already allowed 'appointment').
 - 2026-11-24: the owner checked phase 2 on a real phone: emergency cards open in airplane mode,
   and the calendar file adds the appointment with its reminders. All worked.
+- Phase 3 (papers, doctor report) built and clicked through in demo mode (Arabic + English, 375 px,
+  patient view, encrypted bytes checked) on 2026-11-24. schema.sql re-run on Supabase the same day:
+  bucket private, three storage policies, anonymous upload refused. Not yet tried with real
+  accounts on a phone (camera upload, print to PDF).
