@@ -97,5 +97,5 @@ app replaces it as a demo); its lessons apply where they fit.
   and the calendar file adds the appointment with its reminders. All worked.
 - Phase 3 (papers, doctor report) built and clicked through in demo mode (Arabic + English, 375 px,
   patient view, encrypted bytes checked) on 2026-11-24. schema.sql re-run on Supabase the same day:
-  bucket private, three storage policies, anonymous upload refused. Not yet tried with real
-  accounts on a phone (camera upload, print to PDF).
+  bucket private, three storage policies, anonymous upload refused. The owner then checked it on a
+  phone with a real account (camera photo of a paper, reopening it, report saved as PDF): all worked.
