@@ -459,6 +459,45 @@ begin
 end $$;
 
 -- ======================================================================
+-- Papers (phase 3): photos and PDFs, encrypted in the browser, in a private Storage bucket.
+-- Path: <household id>/<person id>/<file id>. Same rules as records: members read (a patient
+-- only their own person), owner/admin/caregiver add and remove. The bucket only accepts
+-- application/octet-stream, i.e. the encrypted bytes; the server never sees a readable image.
+-- ======================================================================
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('fha-papers', 'fha-papers', false, 6291456, array['application/octet-stream'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create or replace function fha.paper_path_ok(p_name text, p_write boolean) returns boolean
+language plpgsql stable security definer set search_path = fha, pg_temp as $$
+declare
+  parts text[] := string_to_array(p_name, '/');
+  uuid_re constant text := '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+  g uuid;
+  p uuid;
+begin
+  if coalesce(array_length(parts, 1), 0) <> 3 or parts[1] !~ uuid_re or parts[2] !~ uuid_re or parts[3] !~ uuid_re then
+    return false;
+  end if;
+  g := parts[1]::uuid;
+  p := parts[2]::uuid;
+  if p_write then return fha.has_role(g, array['owner', 'admin', 'caregiver']); end if;
+  return fha.is_member(g) and (fha.my_person(g) is null or p = fha.my_person(g));
+end $$;
+
+drop policy if exists fha_papers_select on storage.objects;
+create policy fha_papers_select on storage.objects for select to authenticated
+  using (bucket_id = 'fha-papers' and fha.paper_path_ok(name, false));
+drop policy if exists fha_papers_insert on storage.objects;
+create policy fha_papers_insert on storage.objects for insert to authenticated
+  with check (bucket_id = 'fha-papers' and fha.paper_path_ok(name, true));
+drop policy if exists fha_papers_delete on storage.objects;
+create policy fha_papers_delete on storage.objects for delete to authenticated
+  using (bucket_id = 'fha-papers' and fha.paper_path_ok(name, true));
+
+-- ======================================================================
 -- Grants: signed-in users only (anon gets nothing); RLS and the functions do the rest
 -- ======================================================================
 
