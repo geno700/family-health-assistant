@@ -54,6 +54,9 @@ create table if not exists fha.records (
   deleted_at  timestamptz
 );
 create index if not exists records_group_idx on fha.records(group_id) where deleted_at is null;
+-- Which family key a record was written with (the household's key_check_iv at that time).
+-- After the key changes, writes made with the old key are refused (see records_before).
+alter table fha.records add column if not exists key_id text;
 
 create table if not exists fha.activity_log (
   id             uuid primary key default gen_random_uuid(),
@@ -179,7 +182,15 @@ create policy activity_select on fha.activity_log for select to authenticated
 
 create or replace function fha.records_before() returns trigger
 language plpgsql security definer set search_path = fha, pg_temp as $$
+declare
+  current_key text;
 begin
+  -- A phone still holding the old family key can't write after the key changed.
+  -- "for share" waits for a key change in progress (rotate_key holds the household row).
+  select key_check_iv into current_key from fha.groups where id = new.group_id for share;
+  if new.key_id is not null and new.key_id is distinct from current_key then
+    raise exception 'key_changed' using errcode = '22023';
+  end if;
   if tg_op = 'INSERT' then
     new.created_at := now();
     new.created_by := auth.uid();
@@ -206,6 +217,8 @@ language plpgsql security definer set search_path = fha, pg_temp as $$
 declare
   act text;
 begin
+  -- A key change re-locks every record: one 'key_changed' event instead of one per record
+  if current_setting('fha.rotating', true) = 'on' then return null; end if;
   if tg_op = 'INSERT' then act := 'insert';
   elsif new.deleted_at is not null and old.deleted_at is null then act := 'delete';
   elsif new.deleted_at is null and old.deleted_at is not null then act := 'insert';
@@ -402,6 +415,31 @@ language plpgsql security definer set search_path = fha, pg_temp as $$
 begin
   if not fha.has_role(p_group, array['owner']) then raise exception 'not allowed' using errcode = '42501'; end if;
   delete from fha.groups where id = p_group; -- members, records and activity go with it (cascade)
+end $$;
+
+-- Changing the family key: every live record arrives re-encrypted with the new key, and is
+-- swapped together with the key check in one transaction. If any record was added or removed
+-- meanwhile, nothing changes and the browser tries again.
+create or replace function fha.rotate_key(p_group uuid, p_key_check_cipher text, p_key_check_iv text, p_records jsonb)
+returns void language plpgsql security definer set search_path = fha, pg_temp as $$
+declare
+  n_live integer;
+  n_done integer;
+begin
+  if not fha.has_role(p_group, array['owner', 'admin']) then raise exception 'not allowed' using errcode = '42501'; end if;
+  if jsonb_typeof(p_records) is distinct from 'array' then raise exception 'bad records' using errcode = '22023'; end if;
+  perform 1 from fha.groups where id = p_group for update; -- other writes wait for this
+  select count(*) into n_live from fha.records where group_id = p_group and deleted_at is null;
+  if n_live <> jsonb_array_length(p_records) then raise exception 'records_changed' using errcode = '40001'; end if;
+  update fha.groups set key_check_cipher = p_key_check_cipher, key_check_iv = p_key_check_iv where id = p_group;
+  perform set_config('fha.rotating', 'on', true);
+  update fha.records r set cipher = x.cipher, iv = x.iv, key_id = p_key_check_iv
+  from jsonb_to_recordset(p_records) as x(id uuid, cipher text, iv text)
+  where r.id = x.id and r.group_id = p_group and r.deleted_at is null;
+  get diagnostics n_done = row_count;
+  perform set_config('fha.rotating', 'off', true);
+  if n_done <> n_live then raise exception 'records_changed' using errcode = '40001'; end if;
+  perform fha.log_event(p_group, 'key_changed', null);
 end $$;
 
 create or replace function fha.list_activity(p_group uuid, p_limit integer default 100)
