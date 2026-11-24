@@ -1,6 +1,6 @@
 # Family Health Assistant / منظّم صحة البيت — Plan
 
-Status: **approved 2026-11-24** (Arabic name منظّم صحة البيت; server-visible names/emails accepted; demo, so alarm and voice limits accepted). Phase 1 built and tested in demo mode (2026-11-24). Owner asked the same day for Modern Standard Arabic texts and for the home pharmacy now (moved forward from phase 2): both built and tested in demo mode. Live on the real Supabase project and tested by the owner with two accounts (2026-11-24). Phase 2 (appointments, emergency cards) built the same day and checked on the owner's phone. Phase 3 (encrypted papers, doctor report) built and tested in demo mode the same day.
+Status: **approved 2026-11-24** (Arabic name منظّم صحة البيت; server-visible names/emails accepted; demo, so alarm and voice limits accepted). Phase 1 built and tested in demo mode (2026-11-24). Owner asked the same day for Modern Standard Arabic texts and for the home pharmacy now (moved forward from phase 2): both built and tested in demo mode. Live on the real Supabase project and tested by the owner with two accounts (2026-11-24). Phase 2 (appointments, emergency cards) built the same day and checked on the owner's phone. Phase 3 (encrypted papers, doctor report) built the same day and checked on the owner's phone. Phase 4 helpers (family key change, box-photo reading) built and tested in demo mode the same day; push reminders not built (owner to decide).
 
 - Repo and URL: `family-health-assistant` → https://algebratronics.com/family-health-assistant/
 - One line: one household keeps every family member's medicines, doses and health papers in
@@ -157,8 +157,23 @@ activity_log on record changes. Constraints (not null, checks, foreign keys) in 
   doses taken / skipped / not recorded in the last 14 days, as-needed count, upcoming
   appointments, papers list, and a footer saying it holds no diagnosis or advice. "Print or save
   as PDF" uses the phone's print dialog; print styles hide the app's header and buttons.
-**Phase 4 — reminders and helpers:** web push for dose times; key rotation; box-photo reading
-in the browser.
+**Phase 4 — helpers (2026-11-24)**
+- **Changing the family key** (owner/admin, Household admin → "Change the family key"): a new key
+  is shown once; paper pages are re-encrypted into new files, then every live record and the key
+  check are swapped in one database transaction (`fha.rotate_key`; if records changed meanwhile,
+  nothing changes and it can be retried). Records carry `key_id` (the key check IV they were
+  locked with) and the database refuses writes made with an old key. Other phones are asked for
+  the new key on their next start or save. Older activity-log entries (locked with the old key)
+  show without names.
+- **Reading a medicine box photo** (add-medicine and add-box forms): Tesseract.js runs in the
+  browser (pinned from jsDelivr, about 7 MB the first time, then kept by the service worker); the
+  photo never leaves the phone. Read at full and half size (big brand names are otherwise missed)
+  and parsed by the rules ported from the Android BoxTextParser: name candidates (tap the right
+  one), strength, form, and for the pharmacy also count and expiry. Dose, times and duration are
+  never read. Nothing is saved until the user checks the form and taps Save.
+- **Not built: push reminders while the app is closed.** They need a server job, a new secret
+  (VAPID key) and dose times on the server; the owner accepted reminders-while-open for the demo.
+  To be decided with the owner.
 
 ## 6. Phase 1 is done when
 - Runs locally (`python -m http.server`); every screen clicked through in demo mode, Arabic and

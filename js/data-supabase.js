@@ -114,7 +114,7 @@ export async function listRecords(groupId) {
 }
 
 export async function saveRecord(groupId, rec) {
-  const row = { id: rec.id, group_id: groupId, kind: rec.kind, person_id: rec.person_id, cipher: rec.cipher, iv: rec.iv, deleted_at: null };
+  const row = { id: rec.id, group_id: groupId, kind: rec.kind, person_id: rec.person_id, cipher: rec.cipher, iv: rec.iv, key_id: rec.key_id || null, deleted_at: null };
   return check(await sb.from('records').upsert(row, { onConflict: 'id' }).select(RECORD_COLS).single());
 }
 
@@ -139,6 +139,11 @@ export async function downloadFile(path) {
 
 export async function removeFiles(paths) {
   if (paths.length) check(await sb.storage.from(BUCKET).remove(paths));
+}
+
+/** Swaps every record and the key check to a new family key in one transaction (owner/admin). */
+export async function rotateKey(groupId, keyCheck, records) {
+  check(await sb.rpc('rotate_key', { p_group: groupId, p_key_check_cipher: keyCheck.cipher, p_key_check_iv: keyCheck.iv, p_records: records }));
 }
 
 export async function listActivity(groupId, limit = 100) {

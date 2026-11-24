@@ -385,6 +385,9 @@ export async function saveRecord(groupId, rec) {
   if (!canWrite(m, rec.kind, rec.person_id)) fail('not_allowed');
   const existing = db.records.find((r) => r.id === rec.id && r.group_id === groupId);
   if (existing && !canWrite(m, existing.kind, existing.person_id)) fail('not_allowed');
+  // Same rule as the database: a phone holding an old family key can't write
+  const g = db.groups.find((x) => x.id === groupId);
+  if (rec.key_id && rec.key_id !== g.key_check_iv) fail('key_changed');
   const t = now();
   if (existing) {
     log(db, groupId, existing.deleted_at ? 'insert' : 'update', { kind: rec.kind, record_id: rec.id, before_cipher: existing.cipher, before_iv: existing.iv, after_cipher: rec.cipher, after_iv: rec.iv });
@@ -475,6 +478,22 @@ async function samplePage(lines) {
   g.fillText('SAMPLE', 0, 0); g.restore();
   const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.8));
   return new Uint8Array(await blob.arrayBuffer());
+}
+
+/** Same as fha.rotate_key: all live records and the key check change together, or nothing does. */
+export async function rotateKey(groupId, keyCheck, records) {
+  const db = load();
+  needRole(db, groupId, ADMINS);
+  const live = db.records.filter((r) => r.group_id === groupId && !r.deleted_at);
+  const byId = new Map(records.map((r) => [r.id, r]));
+  if (live.length !== records.length || live.some((r) => !byId.has(r.id))) fail('records_changed');
+  const g = db.groups.find((x) => x.id === groupId);
+  g.key_check_cipher = keyCheck.cipher;
+  g.key_check_iv = keyCheck.iv;
+  const t = now();
+  live.forEach((r) => Object.assign(r, { cipher: byId.get(r.id).cipher, iv: byId.get(r.id).iv, key_id: keyCheck.iv, version: r.version + 1, updated_at: t, updated_by: me().id }));
+  log(db, groupId, 'key_changed');
+  store(db);
 }
 
 // ---------- Encrypted files (papers) ----------

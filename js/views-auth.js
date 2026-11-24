@@ -177,6 +177,7 @@ export function enterKey(main, group, onSubmit) {
       <div class="hero">${icon('key')}<h1>${esc(t('key_enter_title'))}</h1></div>
       <p class="lead">${esc(group.name)}</p>
       <form id="keyForm" class="card form">
+        ${store.wasKeyChanged() ? `<div class="card notice">${esc(t('key_changed_note'))}</div>` : ''}
         <p>${esc(t('key_enter_body'))}</p>
         <textarea class="input key-input" name="code" rows="3" dir="ltr" autocomplete="off" spellcheck="false" required></textarea>
         <p class="form-error" id="err" role="alert"></p>

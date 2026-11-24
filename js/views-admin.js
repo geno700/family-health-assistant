@@ -4,7 +4,7 @@
 import { t } from './i18n.js';
 import { api } from './data.js';
 import * as store from './store.js';
-import { decryptJson } from './crypto.js';
+import { decryptJson, newKeyBytes, encodeKeyCode } from './crypto.js';
 import { esc, icon, toast, confirmDialog, formDialog, download, copyText, $ } from './ui.js';
 import { rerender, go } from './router.js';
 import { isoDate } from './doses.js';
@@ -30,8 +30,9 @@ async function askRole(title, role, personId) {
   return v;
 }
 
-export function render(main, { user }) {
+export function render(main, { user, params = [] }) {
   if (!store.isAdmin()) { go('settings'); return; }
+  if (params[0] === 'key') return keyChange(main);
   const g = store.group();
   const isOwner = store.role() === 'owner';
 
@@ -81,6 +82,12 @@ export function render(main, { user }) {
             <button class="btn btn-secondary" id="newCode">${icon('refresh')}${esc(t('new_join_code'))}</button>
           </div>
           <p class="hint">${esc(t('key_new_body'))}</p>
+        </div>
+
+        <div class="card">
+          <h2 class="flat">${icon('key')} ${esc(t('key_change'))}</h2>
+          <p class="hint">${esc(t('key_change_hint'))}</p>
+          <a class="btn btn-secondary" href="#/admin/key">${icon('key')}${esc(t('key_change'))}</a>
         </div>
 
         <div class="card">
@@ -177,4 +184,51 @@ export function render(main, { user }) {
   }
 
   draw();
+}
+
+/** #/admin/key: a new family key, shown once, then everything is re-locked with it. */
+function keyChange(main) {
+  const keyBytes = newKeyBytes();
+  const code = encodeKeyCode(keyBytes);
+  let busy = false;
+  main.innerHTML = `
+    <section class="page narrow">
+      <a class="back" href="#/admin">${esc(t('back'))}</a>
+      <h1>${icon('key')} ${esc(t('key_change'))}</h1>
+      <div class="card">
+        <p>${esc(t('key_change_body'))}</p>
+        <h2 class="flat">${esc(t('key_change_new'))}</h2>
+        <div class="key-code" dir="ltr">${esc(code)}</div>
+        <button type="button" class="btn btn-secondary" id="copy">${icon('copy')}${esc(t('key_copy'))}</button>
+        <label class="check-row"><input type="checkbox" id="savedIt"> <span>${esc(t('key_saved_check'))}</span></label>
+        <p class="warn-text">${esc(t('key_change_warn'))}</p>
+        <p class="hint" id="progress" role="status"></p>
+        <button class="btn btn-danger btn-big" id="go" disabled>${icon('key')}${esc(t('key_change_go'))}</button>
+      </div>
+    </section>`;
+  $('#copy').onclick = async () => { if (await copyText(code)) toast(t('key_copied')); };
+  $('#savedIt').onchange = (e) => { $('#go').disabled = busy || !e.target.checked; };
+  $('#go').onclick = async () => {
+    if (!(await confirmDialog(t('key_change_confirm'), { danger: true, okLabel: t('key_change_go') }))) return;
+    busy = true;
+    $('#go').disabled = true;
+    $('#savedIt').disabled = true;
+    const progress = $('#progress');
+    // Leaving the page mid-way would stop the change; the browser asks first
+    const stay = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', stay);
+    try {
+      await store.changeKey(keyBytes, (n, total) => { if (progress.isConnected) progress.textContent = t('key_change_progress', n, total); });
+      toast(t('key_changed_done'), 'ok', 6000);
+      go('admin');
+    } catch (e) {
+      const msg = /records_changed/.test(e?.code || e?.message || '') ? 'key_change_retry'
+        : e?.code === 'unreadable_records' ? 'key_change_unreadable' : e?.code === 'not_allowed' ? 'not_allowed' : 'error_generic';
+      toast(t(msg), 'error', 6000);
+      busy = false;
+      if (progress.isConnected) { progress.textContent = ''; $('#savedIt').disabled = false; $('#go').disabled = !$('#savedIt').checked; }
+    } finally {
+      window.removeEventListener('beforeunload', stay);
+    }
+  };
 }

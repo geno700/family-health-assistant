@@ -1,6 +1,7 @@
 // Medicines: list (#/meds), details (#/meds/:id), add (#/meds/new, #/meds/new/:personId),
 // edit (#/meds/:id/edit). Only owner/admin/caregiver can add, edit, stop or delete.
 
+import { newReadState, boxReadHtml, bindBoxRead } from './views-boxread.js';
 import { t, ltr, normalizeDigits, doseWords } from './i18n.js';
 import * as store from './store.js';
 import { doseLine, medTitle, howOften, durationWords, suggestTimes, isoDate, addDays, foodWords } from './doses.js';
@@ -145,6 +146,7 @@ function form(main, existing, presetPerson) {
   };
   if (!existing) s.times = suggestTimes(2, 'NONE', store.person(s.personId));
   let otherAmount = AMOUNTS[s.form].includes(s.amount) ? '' : String(s.amount);
+  const reading = newReadState(); // "read the box" result (new medicines only)
 
   const perDay = () => (s.freq === 'every' ? 1 : s.freq === 'needed' ? 0 : Number(s.freq));
   const refreshTimes = () => { s.times = perDay() ? suggestTimes(perDay(), s.food, store.person(s.personId)) : []; };
@@ -154,6 +156,7 @@ function form(main, existing, presetPerson) {
       <section class="page">
         <a class="back" href="${existing ? `#/meds/${esc(existing.id)}` : '#/meds'}">${esc(t('back'))}</a>
         <h1>${esc(t(existing ? 'edit_med' : 'add_med'))}</h1>
+        ${existing ? '' : boxReadHtml(reading)}
         <form id="mf" class="card form" novalidate>
           <label>${esc(t('med_for'))}<select class="input" name="personId" id="personId">
             <option value="">—</option>
@@ -222,6 +225,18 @@ function form(main, existing, presetPerson) {
     fm.querySelectorAll('[name=food]').forEach((r) => { r.onchange = () => { capture(); s.food = r.value; refreshTimes(); draw(); }; });
     fm.querySelectorAll('[name=dur]').forEach((r) => { r.onchange = () => { capture(); s.forever = r.value === 'forever'; draw(); }; });
     fm.onsubmit = async (ev) => { ev.preventDefault(); capture(); await submit(); };
+    if (!existing) bindBoxRead(main, reading, {
+      keep: capture,
+      draw,
+      // Name, strength and form only: dose, times and duration are always the user's
+      apply: (res, name) => {
+        if (name) s.name = name;
+        if (res.strength) s.strength = res.strength;
+        if (res.form && FORMS.includes(res.form) && res.form !== s.form) {
+          s.form = res.form; s.amount = AMOUNTS[s.form].includes(1) ? 1 : AMOUNTS[s.form][0]; otherAmount = '';
+        }
+      },
+    });
   };
 
   const submit = async () => {

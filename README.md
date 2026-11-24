@@ -50,6 +50,11 @@ It is served at https://algebratronics.com/family-health-assistant/. All paths a
   with the camera or from the phone (photos or PDF), add or delete pages.
 - A person's page → Report for the doctor → Print or save as PDF.
 
+## Phase 4 to try in the demo
+- Medicines → Add, or Pharmacy → Add: "Read the medicine box with the camera" fills the name,
+  strength and form (and count and expiry for the pharmacy). The photo is read on the phone.
+- Settings → Manage household → "Change the family key" (owner/admin).
+
 ## How privacy works
 
 - Creating a household makes a 256-bit **family key** in the owner's browser and shows it once

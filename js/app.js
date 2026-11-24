@@ -79,7 +79,11 @@ async function render() {
     return;
   }
 
-  if (!offline) await store.loadMemberships();
+  if (!offline) {
+    await store.loadMemberships();
+    // An admin changed the family key since this phone last opened the household
+    if (store.hasKey() && !(await store.keyStillValid())) store.dropKey();
+  }
   if (!store.active()) {
     const pending = store.memberships().filter((x) => x.member.status === 'pending');
     const disabled = store.memberships().filter((x) => x.group.disabled);
@@ -116,7 +120,7 @@ async function render() {
       return store.onChange(draw);
     },
     settings: () => settingsView.render(main, { user }),
-    admin: () => adminView.render(main, { user }),
+    admin: () => adminView.render(main, { user, params: route.params }),
   };
   cleanup = (views[route.name] || views.today)() || null;
   if (store.unreadableCount() > 0) toast(t('key_wrong'), 'error');

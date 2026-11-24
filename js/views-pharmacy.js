@@ -2,6 +2,7 @@
 // (#/pharmacy/new, #/pharmacy/new/:medicineId fills in that medicine), edit (#/pharmacy/:id/edit).
 // Owner/admin/caregiver change boxes; a viewer reads; a patient doesn't see the pharmacy.
 
+import { newReadState, boxReadHtml, bindBoxRead } from './views-boxread.js';
 import { t, ltr, normalizeDigits, countWords, unitPlural, monthYear, joinList } from './i18n.js';
 import * as store from './store.js';
 import { pharmacy, search, needsBuying, isCounted, sameMedicine } from './stock.js';
@@ -176,12 +177,14 @@ function form(main, existing, fromMedId) {
   const s = existing
     ? { name: existing.name, strength: existing.strength || '', form: existing.form, count: String(leftNow), expiry: existing.expiry || '', note: existing.note || '' }
     : { name: fromMed?.name || typed, strength: fromMed?.strength || '', form: fromMed?.form || 'TABLET', count: '', expiry: '', note: '' };
+  const reading = { ...newReadState(), useCount: true, useExpiry: true }; // "read the box" (new boxes only)
 
   const draw = () => {
     main.innerHTML = `
       <section class="page">
         <a class="back" href="${existing ? `#/pharmacy/${esc(existing.id)}` : '#/pharmacy'}">${esc(t('back'))}</a>
         <h1>${esc(t(existing ? 'edit_stock' : 'add_stock'))}</h1>
+        ${existing ? '' : boxReadHtml(reading)}
         <form id="sf" class="card form" novalidate>
           <label>${esc(t('med_name'))}<input class="input" name="name" value="${esc(s.name)}" placeholder="${esc(t('med_name_hint'))}" dir="ltr" maxlength="60" required></label>
           <p class="form-error" data-for="name"></p>
@@ -202,6 +205,17 @@ function form(main, existing, fromMedId) {
       Object.assign(s, { name: d.get('name'), strength: d.get('strength'), form: d.get('form') || s.form, count: d.get('count'), expiry: d.get('expiry'), note: d.get('note') });
     };
     fm.querySelectorAll('input[name=form]').forEach((r) => { r.onchange = () => { keep(); draw(); }; });
+    if (!existing) bindBoxRead(main, reading, {
+      keep,
+      draw,
+      apply: (res, name) => {
+        if (name) s.name = name;
+        if (res.strength) s.strength = res.strength;
+        if (res.form && FORMS.includes(res.form)) s.form = res.form;
+        if (res.count != null && isCounted(res.form || s.form)) s.count = String(res.count);
+        if (res.expiry) s.expiry = res.expiry;
+      },
+    });
     fm.onsubmit = async (ev) => {
       ev.preventDefault();
       keep();

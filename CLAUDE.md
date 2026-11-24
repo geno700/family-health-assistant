@@ -63,6 +63,14 @@ app replaces it as a demo); its lessons apply where they fit.
   sample data changes. sw.js VERSION is now fha-v5; bump it on every app file change.
 - 2026-11-24 (phase 2): appointments are `appointment` records (person_id = the person). Real
   reminders with the app closed come from an .ics file for the phone's calendar, not the app.
+- 2026-11-24 (phase 4): family key change = `store.changeKey` + `fha.rotate_key` (one transaction,
+  count check). Every record write sends `key_id` (= group.key_check_iv); `records_before` refuses a
+  mismatch with 'key_changed', and the app then drops the old key and asks for the new one. On
+  start, `store.keyStillValid()` does the same check. sw.js VERSION fha-v7.
+- 2026-11-24 (phase 4): box-photo reading (`js/box-reader.js`, port of the Android BoxTextParser,
+  node tests in the scratchpad passed 5/5) uses Tesseract.js 5.1.1 + tesseract.js-core 5.1.1 +
+  @tesseract.js-data/eng 1.0.0 from jsDelivr, reading at full and half size. Fills name, strength,
+  form (+ count, expiry in the pharmacy); never dose, times or duration.
 - 2026-11-24 (phase 3): paper pages are encrypted in the browser (`encryptBytes`) and stored in
   the private bucket `fha-papers` (accepts only application/octet-stream, 6 MB) at
   `<household>/<person>/<file>`; storage policies call `fha.paper_path_ok`. The demo keeps files in
@@ -99,3 +107,7 @@ app replaces it as a demo); its lessons apply where they fit.
   patient view, encrypted bytes checked) on 2026-11-24. schema.sql re-run on Supabase the same day:
   bucket private, three storage policies, anonymous upload refused. The owner then checked it on a
   phone with a real account (camera photo of a paper, reopening it, report saved as PDF): all worked.
+- Phase 4 helpers (key change, box-photo reading) built and clicked through in demo mode (Arabic +
+  English, 375 px; key change kept all 73 items and re-locked paper photos; a phone with the old key
+  is refused and asked for the new one) on 2026-11-24. schema.sql re-run on Supabase the same day.
+  Not yet tried with real accounts. Push reminders not built: waiting for the owner's decision.

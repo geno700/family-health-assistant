@@ -3,7 +3,8 @@
 // so views work with plain objects and never see cipher text or call the backend for records.
 
 import { api } from './data.js';
-import { decodeKeyCode, keyMatches, loadDeviceKey, saveDeviceKey, encryptJson, decryptJson, encryptBytes, decryptBytes } from './crypto.js';
+import { decodeKeyCode, keyMatches, loadDeviceKey, saveDeviceKey, forgetDeviceKey, encryptJson, decryptJson, encryptBytes, decryptBytes, makeKeyCheck } from './crypto.js';
+import { rerender } from './router.js';
 import { prepareFile } from './files.js';
 import { isoDate } from './doses.js';
 
@@ -112,6 +113,90 @@ export async function unlock(code) {
 
 export const currentKey = () => state.key;
 
+// ---------- Family key changes ----------
+
+let keyWasChanged = false;
+/** True after this device found out (this session) that an admin changed the family key. */
+export const wasKeyChanged = () => keyWasChanged;
+
+/** Does the key on this device still open the household? (false after someone changed it) */
+export async function keyStillValid() {
+  const g = group();
+  if (!g || !state.key) return true;
+  return keyMatches(state.key, { cipher: g.key_check_cipher, iv: g.key_check_iv });
+}
+
+/** Forgets this device's old key so the app asks for the new one. */
+export function dropKey() {
+  const g = group();
+  if (g) forgetDeviceKey(g.id);
+  state.key = null;
+  state.people.clear(); state.meds.clear(); state.logs.clear(); state.stock.clear(); state.appts.clear(); state.papers.clear(); forgetFileUrls();
+  state.loaded = false;
+  keyWasChanged = true;
+}
+
+/**
+ * Re-locks the whole household with a new key (owner/admin): paper pages are re-encrypted into
+ * new files first, then every record and the key check are swapped in one database transaction.
+ * onStep(done, total). Errors: 'unreadable_records', 'records_changed', 'not_allowed'.
+ */
+export async function changeKey(newKey, onStep) {
+  const g = group();
+  const oldKey = state.key;
+  await reload();
+  if (state.unreadable > 0) throw Object.assign(new Error('unreadable_records'), { code: 'unreadable_records' });
+  const rows = await api.listRecords(g.id);
+  const pageCount = papers().reduce((n, p) => n + p.files.length, 0);
+  const total = pageCount + rows.length;
+  let done = 0;
+  const step = () => { done += 1; if (done % 10 === 0 || done === total) onStep?.(done, total); };
+  onStep?.(0, total);
+
+  const newPaths = [];
+  const oldPaths = [];
+  const newPapers = new Map();
+  try {
+    for (const p of papers()) {
+      const files = [];
+      for (const f of p.files) {
+        const plainBytes = await decryptBytes(oldKey, await api.downloadFile(f.path), f.iv);
+        const { data, iv } = await encryptBytes(newKey, plainBytes);
+        const id = newId();
+        const path = `${g.id}/${p.personId}/${id}`;
+        await api.uploadFile(path, data);
+        newPaths.push(path);
+        oldPaths.push(f.path);
+        files.push({ ...f, id, path, iv });
+        step();
+      }
+      newPapers.set(p.id, { ...p, files });
+    }
+    const records = [];
+    for (const r of rows) {
+      let data = await decryptJson(oldKey, r.cipher, r.iv);
+      if (r.kind === 'paper' && newPapers.has(r.id)) {
+        const { _updatedAt, ...paperData } = newPapers.get(r.id);
+        data = paperData;
+      }
+      const c = await encryptJson(newKey, data);
+      records.push({ id: r.id, cipher: c.cipher, iv: c.iv });
+      step();
+    }
+    const check = await makeKeyCheck(newKey);
+    await api.rotateKey(g.id, check, records);
+    g.key_check_cipher = check.cipher;
+    g.key_check_iv = check.iv;
+  } catch (e) {
+    try { await api.removeFiles(newPaths); } catch { /* best effort */ }
+    throw e;
+  }
+  saveDeviceKey(g.id, newKey);
+  state.key = newKey;
+  try { await api.removeFiles(oldPaths); } catch { /* old copies, unreadable with the new key anyway */ }
+  await reload();
+}
+
 // ---------- Records ----------
 
 export async function reload() {
@@ -142,7 +227,18 @@ async function put(kind, personId, obj) {
   const g = group();
   const { id, _updatedAt, ...data } = obj;
   const c = await encryptJson(state.key, { ...data, id });
-  await api.saveRecord(g.id, { id, kind, person_id: personId, cipher: c.cipher, iv: c.iv });
+  try {
+    // key_id: which key this was locked with, so the server refuses writes after a key change
+    await api.saveRecord(g.id, { id, kind, person_id: personId, cipher: c.cipher, iv: c.iv, key_id: g.key_check_iv });
+  } catch (e) {
+    if (e?.code === 'key_changed' || /key_changed/.test(e?.message || '')) {
+      // Someone changed the family key: ask for the new one instead of saving with the old
+      await loadMemberships();
+      dropKey();
+      rerender();
+    }
+    throw e;
+  }
   return { ...data, id };
 }
 

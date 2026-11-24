@@ -232,6 +232,16 @@ legend { font-weight: 700; padding: 0; margin-bottom: .3rem; }
 .em-meds { margin: .2rem 0 0; padding-inline-start: 1.2rem; }
 .em-meds li { margin: .2rem 0; }
 
+/* ---------- Reading a medicine box ---------- */
+.read-box { display: flex; flex-direction: column; gap: .4rem; }
+.read-box .file-btn.disabled { opacity: .5; pointer-events: none; }
+.read-result { gap: .4rem; }
+.chip-btn {
+  min-height: var(--tap); padding: .3rem 1rem; border-radius: 999px; border: 1.5px solid var(--line);
+  background: var(--card); font-weight: 600; cursor: pointer; direction: ltr;
+}
+.chip-btn.on { border-color: var(--green); background: var(--green-soft); color: var(--green-dark); }
+
 /* ---------- Papers ---------- */
 .list-row > .icon { color: var(--green); flex: none; }
 .page-file { margin: 0; }
